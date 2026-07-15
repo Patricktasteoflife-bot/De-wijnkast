@@ -1,0 +1,17 @@
+{
+  "name": "De Wijnkast",
+  "short_name": "De Wijnkast",
+  "description": "Sommige flessen wachten op de juiste tafel.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#10100f",
+  "theme_color": "#10100f",
+  "icons": [
+    {
+      "src": "assets/taste-of-life-logo.jpg",
+      "sizes": "any",
+      "type": "image/jpeg",
+      "purpose": "any"
+    }
+  ]
+}
