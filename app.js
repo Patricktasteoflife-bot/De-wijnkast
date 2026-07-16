@@ -13,7 +13,7 @@
     products: [],
     cart: readStorage(CART_KEY, {}),
     filter: "Alles",
-    sort: "newest",
+    sort: "price-asc",
     busy: false
   };
 
