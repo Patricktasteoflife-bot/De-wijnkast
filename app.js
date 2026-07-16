@@ -101,6 +101,7 @@
     grid: document.querySelector("#productGrid"),
     empty: document.querySelector("#emptyState"),
     sort: document.querySelector("#sortSelect"),
+    sortControl: document.querySelector("#sortControl"),
     headerCartButton: document.querySelector("#headerCartButton"),
     headerCartCount: document.querySelector("#headerCartCount"),
     floatingCart: document.querySelector("#floatingCartButton"),
@@ -151,6 +152,9 @@
     els.closeCheckout.addEventListener("click", () => els.checkoutDialog.close());
     els.closeSuccess.addEventListener("click", () => els.successDialog.close());
     els.checkoutForm.addEventListener("submit", submitOrder);
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && els.drawer.classList.contains("open")) closeCart();
+    });
   }
 
   async function loadProducts() {
@@ -198,6 +202,9 @@
   }
 
   function renderFilters() {
+    const hasProducts = state.products.length > 0;
+    els.filters.hidden = !hasProducts;
+    els.sortControl.hidden = !hasProducts;
     const categories = ["Alles", ...new Set(state.products.map((product) => product.color).filter(Boolean))];
     els.filters.innerHTML = categories.map((category) => (
       `<button type="button" class="filter-button ${category === state.filter ? "active" : ""}" data-filter="${escapeHtml(category)}">${escapeHtml(category)}</button>`
@@ -244,8 +251,8 @@
             ${product.description ? `<p class="product-subtitle">${escapeHtml(product.description)}</p>` : ""}
             <div class="product-bottom">
               <strong class="price">${formatMoney(product.price_cents)}</strong>
-              <button class="add-button" type="button" data-add="${escapeAttr(product.id)}" ${available <= 0 ? "disabled" : ""}>
-                ${available <= 0 ? "In wijnmand" : "Toevoegen"}
+              <button class="add-button" type="button" data-add="${escapeAttr(product.id)}" aria-label="Voeg ${escapeAttr(product.producer || product.name)} toe aan de wijnmand" ${available <= 0 ? "disabled" : ""}>
+                ${available <= 0 ? "Geselecteerd" : "In wijnmand"}
               </button>
             </div>
           </div>
@@ -309,9 +316,13 @@
     els.cartSummary.hidden = items.length === 0;
     els.cartSubtotal.textContent = formatMoney(total);
     els.checkoutTotal.textContent = formatMoney(total);
-    els.cartLines.innerHTML = items.map(({ product, quantity }) => `
+    els.cartLines.innerHTML = items.map(({ product, quantity }) => {
+      const thumbnail = product.image_url
+        ? `<img src="${escapeAttr(product.image_url)}" alt="" />`
+        : `<span class="mini-bottle" aria-hidden="true"></span>`;
+      return `
       <article class="cart-line">
-        <div class="cart-thumb">T</div>
+        <div class="cart-thumb">${thumbnail}</div>
         <div>
           <h3>${escapeHtml(product.producer || product.name)}</h3>
           <p>${escapeHtml([product.name, product.vintage].filter(Boolean).join(" · "))}</p>
@@ -322,7 +333,8 @@
           </div>
         </div>
         <button class="remove-button" type="button" data-remove="${escapeAttr(product.id)}" aria-label="Verwijderen">×</button>
-      </article>`).join("");
+      </article>`;
+    }).join("");
     els.cartLines.querySelectorAll("[data-decrease]").forEach((button) => button.addEventListener("click", () => setCartQty(button.dataset.decrease, Number(state.cart[button.dataset.decrease]) - 1)));
     els.cartLines.querySelectorAll("[data-increase]").forEach((button) => button.addEventListener("click", () => setCartQty(button.dataset.increase, Number(state.cart[button.dataset.increase]) + 1)));
     els.cartLines.querySelectorAll("[data-remove]").forEach((button) => button.addEventListener("click", () => setCartQty(button.dataset.remove, 0)));
@@ -333,14 +345,15 @@
     els.drawer.classList.add("open");
     els.drawer.setAttribute("aria-hidden", "false");
     els.floatingCart.hidden = true;
-    document.body.style.overflow = "hidden";
+    document.body.classList.add("cart-open");
+    window.setTimeout(() => els.closeCart.focus(), 50);
   }
 
   function closeCart() {
     els.drawer.classList.remove("open");
     els.drawer.setAttribute("aria-hidden", "true");
     els.backdrop.hidden = true;
-    document.body.style.overflow = "";
+    document.body.classList.remove("cart-open");
     renderCart();
   }
 

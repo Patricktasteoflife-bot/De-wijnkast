@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#10100f" />
+    <meta name="theme-color" content="#0b0908" />
     <meta name="description" content="De Wijnkast van Taste of Life: bijzondere flessen in kleine aantallen." />
     <title>De Wijnkast | Taste of Life</title>
     <link rel="manifest" href="manifest.webmanifest" />
@@ -11,53 +11,69 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <a class="skip-link" href="#collectie">Ga naar de wijnkast</a>
+
     <header class="site-header">
-      <a class="brand" href="#top" aria-label="Naar boven">
-        <img src="assets/taste-of-life-logo.jpg" alt="Taste of Life Wijnhandel" />
-        <span>
-          <small>Taste of Life</small>
-          <strong>De Wijnkast</strong>
-        </span>
-      </a>
-      <button class="icon-button cart-trigger" id="headerCartButton" type="button" aria-label="Open winkelmand">
-        <span aria-hidden="true">Wijnmand</span>
-        <b id="headerCartCount">0</b>
-      </button>
+      <div class="header-inner">
+        <a class="brand" href="#top" aria-label="Naar boven">
+          <img src="assets/taste-of-life-logo.jpg" alt="Taste of Life Wijnhandel" />
+          <span>
+            <small>Taste of Life</small>
+            <strong>De Wijnkast</strong>
+          </span>
+        </a>
+        <button class="icon-button cart-trigger" id="headerCartButton" type="button" aria-label="Open wijnmand">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3.5 5.5h2l1.6 9.1a2 2 0 0 0 2 1.7h7.8a2 2 0 0 0 2-1.7l1.1-6.1H6.1M9.5 20a.7.7 0 1 1-1.4 0 .7.7 0 0 1 1.4 0Zm8 0a.7.7 0 1 1-1.4 0 .7.7 0 0 1 1.4 0Z" />
+          </svg>
+          <span aria-hidden="true">Wijnmand</span>
+          <b id="headerCartCount">0</b>
+        </button>
+      </div>
     </header>
 
     <main id="top">
-      <section class="hero">
+      <section class="hero" aria-labelledby="heroTitle">
         <div class="hero-image" role="img" aria-label="Een bijzondere fles Bourgogne in warm avondlicht"></div>
         <div class="hero-shade"></div>
         <div class="hero-content">
           <p class="eyebrow">Taste of Life presenteert</p>
-          <h1>De Wijnkast</h1>
-          <p>Sommige flessen wachten op de juiste tafel.</p>
+          <h1 id="heroTitle">De Wijnkast</h1>
+          <p class="hero-copy">Sommige flessen wachten op de juiste tafel.</p>
           <a class="primary-button" href="#collectie">Bekijk de wijnkast</a>
         </div>
+        <a class="scroll-cue" href="#introTitle" aria-label="Lees verder">
+          <span></span>
+          Ontdek
+        </a>
       </section>
 
       <section class="slogan-band" aria-label="Slogan van Taste of Life">
-        <span>Taste of Life</span>
-        <p>Liefde in het glas.</p>
+        <div>
+          <span>Taste of Life</span>
+          <p>Liefde in het glas.</p>
+        </div>
       </section>
 
       <section class="intro" aria-labelledby="introTitle">
-        <p class="eyebrow dark">Persoonlijk geselecteerd</p>
-        <h2 id="introTitle">De laatste flessen uit mijn kast</h2>
-        <p>
-          Soms is er nog maar één fles, soms een klein rijtje. Wat je hier ziet is direct beschikbaar,
-          zolang de voorraad strekt.
-        </p>
+        <div class="section-inner">
+          <p class="eyebrow">Persoonlijk geselecteerd</p>
+          <h2 id="introTitle">De laatste flessen uit mijn kast</h2>
+          <div class="gold-divider" aria-hidden="true"><span></span></div>
+          <p>
+            Soms is er nog maar één fles, soms een klein rijtje. Wat je hier ziet is direct beschikbaar,
+            zolang de voorraad strekt.
+          </p>
+        </div>
       </section>
 
       <section class="collection" id="collectie" aria-labelledby="collectionTitle">
         <div class="collection-heading">
           <div>
-            <p class="eyebrow dark">Nu beschikbaar</p>
+            <p class="eyebrow">Nu beschikbaar</p>
             <h2 id="collectionTitle">Ontdek de collectie</h2>
           </div>
-          <label class="sort-control">
+          <label class="sort-control" id="sortControl">
             <span>Sorteren</span>
             <select id="sortSelect">
               <option value="newest">Nieuwste eerst</option>
@@ -71,18 +87,21 @@
         <div class="filters" id="filters" role="group" aria-label="Filter op soort wijn"></div>
         <div class="product-grid" id="productGrid" aria-live="polite"></div>
         <div class="empty-state" id="emptyState" hidden>
+          <div class="empty-mark" aria-hidden="true">T</div>
           <span>De wijnkast wordt gevuld.</span>
           <p>Binnenkort vind je hier de eerste bijzondere flessen.</p>
         </div>
       </section>
 
       <section class="promise">
-        <p class="eyebrow">Van mijn wijnkast naar jouw tafel</p>
-        <h2>Persoonlijk, kleinschalig en met liefde voor de fles.</h2>
-        <div class="promise-grid">
-          <article><b>01</b><h3>Echt beschikbaar</h3><p>De voorraad wordt direct bijgewerkt.</p></article>
-          <article><b>02</b><h3>Veilig besteld</h3><p>Jouw bestelling komt rechtstreeks bij Taste of Life binnen.</p></article>
-          <article><b>03</b><h3>Persoonlijk contact</h3><p>We stemmen ophalen of verzenden zorgvuldig met je af.</p></article>
+        <div class="promise-inner">
+          <p class="eyebrow">Van mijn wijnkast naar jouw tafel</p>
+          <h2>Persoonlijk, kleinschalig en met liefde voor de fles.</h2>
+          <div class="promise-grid">
+            <article><b>01</b><h3>Echt beschikbaar</h3><p>De voorraad wordt direct bijgewerkt.</p></article>
+            <article><b>02</b><h3>Veilig besteld</h3><p>Jouw bestelling komt rechtstreeks bij Taste of Life binnen.</p></article>
+            <article><b>03</b><h3>Persoonlijk contact</h3><p>We stemmen ophalen of verzenden zorgvuldig met je af.</p></article>
+          </div>
         </div>
       </section>
     </main>
@@ -96,7 +115,7 @@
     <div class="drawer-backdrop" id="drawerBackdrop" hidden></div>
     <aside class="cart-drawer" id="cartDrawer" aria-hidden="true" aria-labelledby="cartTitle">
       <div class="drawer-header">
-        <div><p class="eyebrow dark">Jouw selectie</p><h2 id="cartTitle">De wijnmand</h2></div>
+        <div><p class="eyebrow">Jouw selectie</p><h2 id="cartTitle">De wijnmand</h2></div>
         <button class="close-button" id="closeCartButton" type="button" aria-label="Sluiten">×</button>
       </div>
       <div class="cart-lines" id="cartLines"></div>
@@ -114,7 +133,7 @@
     <dialog class="checkout-dialog" id="checkoutDialog">
       <form id="checkoutForm" method="dialog">
         <div class="dialog-heading">
-          <div><p class="eyebrow dark">Bijna van jou</p><h2>Bestelling afronden</h2></div>
+          <div><p class="eyebrow">Bijna van jou</p><h2>Bestelling afronden</h2></div>
           <button class="close-button" id="closeCheckoutButton" type="button" aria-label="Sluiten">×</button>
         </div>
         <div class="form-grid">
@@ -142,7 +161,7 @@
 
     <dialog class="success-dialog" id="successDialog">
       <div class="success-mark">✓</div>
-      <p class="eyebrow dark">Dank je wel</p>
+      <p class="eyebrow">Dank je wel</p>
       <h2>De flessen zijn voor jou gereserveerd.</h2>
       <p id="successMessage"></p>
       <button class="primary-button wide" id="closeSuccessButton" type="button">Verder kijken</button>
