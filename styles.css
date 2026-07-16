@@ -814,14 +814,20 @@ dialog::backdrop { background: rgba(2, 1, 1, .8); backdrop-filter: blur(5px); }
   .cart-trigger svg { width: 20px; height: 20px; }
   .cart-trigger b { min-width: 27px; height: 27px; font-size: 13px; }
   .hero { min-height: 700px; align-items: end; }
-  .hero-image { background-position: 50% 42%; filter: saturate(.9) contrast(1.04) brightness(.76); }
+  .hero-image {
+    background-color: #050302;
+    background-position: 50% 40%;
+    background-size: auto 90%;
+    background-repeat: no-repeat;
+    filter: saturate(.9) contrast(1.04) brightness(.78);
+  }
   .hero-shade {
     background:
       linear-gradient(0deg, rgba(5, 3, 2, .95) 0%, rgba(5, 3, 2, .62) 42%, rgba(5, 3, 2, .1) 78%),
       linear-gradient(90deg, rgba(5, 3, 2, .48), rgba(5, 3, 2, .04));
   }
   .hero-content { width: calc(100% - 36px); margin: 0 18px; padding: 0 0 58px; }
-  .hero h1 { font-size: clamp(58px, 18vw, 76px); line-height: .92; }
+  .hero h1 { font-size: clamp(50px, 15vw, 62px); line-height: .94; }
   .ornament { margin: 27px 0 21px; }
   .hero-content > p { font-size: 13px; line-height: 1.7; }
   .hero .outline-button { width: 100%; margin-top: 26px; }
