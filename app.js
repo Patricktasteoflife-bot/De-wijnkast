@@ -2,7 +2,9 @@
   "use strict";
 
   const config = window.WIJNKAST_CONFIG || {};
-  const demoMode = config.demoMode === true;
+  const localPreview = /^(localhost|127\.0\.0\.1)$/.test(location.hostname)
+    && new URLSearchParams(location.search).get("preview") === "1";
+  const demoMode = config.demoMode === true || localPreview;
   const backendConfigured = Boolean(config.supabaseUrl && config.supabaseAnonKey);
   const CART_KEY = "tol-wijnkast-cart-v1";
   const CUSTOMER_KEY = "tol-wijnkast-customer-v1";
@@ -102,6 +104,8 @@
     empty: document.querySelector("#emptyState"),
     sort: document.querySelector("#sortSelect"),
     sortControl: document.querySelector("#sortControl"),
+    collectionOptions: document.querySelector("#collectionOptions"),
+    selectionDots: document.querySelector("#selectionDots"),
     headerCartButton: document.querySelector("#headerCartButton"),
     headerCartCount: document.querySelector("#headerCartCount"),
     floatingCart: document.querySelector("#floatingCartButton"),
@@ -184,7 +188,7 @@
       name: product.name,
       producer: product.producer || "",
       vintage: product.vintage || "",
-      region: [product.region, product.country].filter(Boolean).join(" · "),
+      region: product.region || "",
       country: product.country || "",
       color: product.color || "Overig",
       price_cents: Number(product.price_cents || 0),
@@ -205,6 +209,8 @@
     const hasProducts = state.products.length > 0;
     els.filters.hidden = !hasProducts;
     els.sortControl.hidden = !hasProducts;
+    els.collectionOptions.hidden = !hasProducts;
+    els.selectionDots.hidden = !hasProducts;
     const categories = ["Alles", ...new Set(state.products.map((product) => product.color).filter(Boolean))];
     els.filters.innerHTML = categories.map((category) => (
       `<button type="button" class="filter-button ${category === state.filter ? "active" : ""}" data-filter="${escapeHtml(category)}">${escapeHtml(category)}</button>`
@@ -234,6 +240,9 @@
     els.grid.innerHTML = products.map((product) => {
       const cartQty = Number(state.cart[product.id] || 0);
       const available = Math.max(0, product.stock - cartQty);
+      const metaParts = [product.country, product.region]
+        .filter(Boolean)
+        .filter((value, index, values) => values.findIndex((item) => item.toLowerCase() === value.toLowerCase()) === index);
       const image = product.image_url
         ? `<img src="${escapeAttr(product.image_url)}" alt="${escapeAttr(product.producer)} ${escapeAttr(product.name)}" loading="lazy" />`
         : `<div class="bottle-fallback" aria-hidden="true"></div>`;
@@ -242,17 +251,19 @@
         <article class="product-card">
           <div class="product-image">
             <span class="stock-badge ${product.stock > 1 ? "more" : ""}">${stockText}</span>
+            <svg class="heart-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21S3 15.7 3 8.8A4.8 4.8 0 0 1 12 6a4.8 4.8 0 0 1 9 2.8C21 15.7 12 21 12 21Z" /></svg>
             ${image}
           </div>
           <div class="product-info">
-            <span class="product-meta">${escapeHtml([product.region, product.vintage].filter(Boolean).join(" · "))}</span>
+            <span class="product-meta">${escapeHtml(metaParts.join(" | "))}</span>
             <h3 class="product-title">${escapeHtml(product.producer || product.name)}</h3>
             ${product.producer && product.producer !== product.name ? `<p class="product-subtitle">${escapeHtml(product.name)}</p>` : ""}
-            ${product.description ? `<p class="product-subtitle">${escapeHtml(product.description)}</p>` : ""}
-            <div class="product-bottom">
-              <strong class="price">${formatMoney(product.price_cents)}</strong>
+            ${product.vintage ? `<p class="product-vintage">${escapeHtml(product.vintage)}</p>` : ""}
+            <strong class="price">${formatMoney(product.price_cents)}</strong>
+            <div class="product-actions">
+              <span class="view-label" aria-hidden="true">Bekijk wijn</span>
               <button class="add-button" type="button" data-add="${escapeAttr(product.id)}" aria-label="Voeg ${escapeAttr(product.producer || product.name)} toe aan de wijnmand" ${available <= 0 ? "disabled" : ""}>
-                ${available <= 0 ? "Geselecteerd" : "In wijnmand"}
+                ${available <= 0 ? "✓" : "+"}
               </button>
             </div>
           </div>

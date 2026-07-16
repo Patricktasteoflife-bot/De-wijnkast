@@ -1,4 +1,4 @@
-const CACHE = "taste-of-life-wijnkast-v5-1-premium";
+const CACHE = "taste-of-life-wijnkast-v5-2-wijnkelder";
 const ASSETS = [
   "/",
   "/index.html",
@@ -7,7 +7,7 @@ const ASSETS = [
   "/app.js",
   "/manifest.webmanifest",
   "/assets/taste-of-life-logo.jpg",
-  "/assets/wijnkast-hero.png"
+  "/wijnkelder-hero-v2.jpg"
 ];
 
 self.addEventListener("install", (event) => {
