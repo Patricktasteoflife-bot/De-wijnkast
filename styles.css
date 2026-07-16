@@ -221,8 +221,14 @@ img { max-width: 100%; display: block; }
   line-height: .94;
   letter-spacing: -.045em;
 }
-.hero h1 span { color: #fffdf7; }
-.hero h1 em { color: var(--gold-bright); font-style: normal; }
+.hero h1 span { color: #fffdf7; white-space: nowrap; }
+.hero h1 em {
+  margin-top: 12px;
+  color: var(--gold-bright);
+  font-size: .48em;
+  font-style: normal;
+  letter-spacing: -.02em;
+}
 .ornament {
   width: min(285px, 74%);
   margin: 35px 0 27px;
