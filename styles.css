@@ -194,16 +194,16 @@ img { max-width: 100%; display: block; }
 .hero-image {
   position: absolute;
   inset: 0;
-  background: url("wijnkelder-hero-v2.jpg") 54% center / cover no-repeat;
-  filter: saturate(.82) contrast(1.08) brightness(.76);
+  background: url("wijnkelder-hero-v2.jpg") 50% 46% / cover no-repeat;
+  filter: saturate(.88) contrast(1.04) brightness(.8);
   transform: scale(1.01);
 }
 .hero-shade {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(90deg, rgba(5, 3, 2, .96) 0%, rgba(5, 3, 2, .87) 25%, rgba(5, 3, 2, .42) 49%, rgba(5, 3, 2, .06) 74%),
-    linear-gradient(0deg, rgba(5, 3, 2, .6) 0%, transparent 40%, rgba(3, 2, 1, .36) 100%);
+    linear-gradient(90deg, rgba(5, 3, 2, .93) 0%, rgba(5, 3, 2, .76) 28%, rgba(5, 3, 2, .3) 54%, rgba(5, 3, 2, .04) 78%),
+    linear-gradient(0deg, rgba(5, 3, 2, .68) 0%, transparent 45%, rgba(3, 2, 1, .2) 100%);
 }
 .hero-content {
   position: relative;
@@ -814,11 +814,11 @@ dialog::backdrop { background: rgba(2, 1, 1, .8); backdrop-filter: blur(5px); }
   .cart-trigger svg { width: 20px; height: 20px; }
   .cart-trigger b { min-width: 27px; height: 27px; font-size: 13px; }
   .hero { min-height: 700px; align-items: end; }
-  .hero-image { background-position: 62% center; filter: saturate(.78) contrast(1.08) brightness(.63); }
+  .hero-image { background-position: 50% 42%; filter: saturate(.9) contrast(1.04) brightness(.76); }
   .hero-shade {
     background:
-      linear-gradient(0deg, rgba(5, 3, 2, .97) 0%, rgba(5, 3, 2, .78) 40%, rgba(5, 3, 2, .2) 76%),
-      linear-gradient(90deg, rgba(5, 3, 2, .8), rgba(5, 3, 2, .14));
+      linear-gradient(0deg, rgba(5, 3, 2, .95) 0%, rgba(5, 3, 2, .62) 42%, rgba(5, 3, 2, .1) 78%),
+      linear-gradient(90deg, rgba(5, 3, 2, .48), rgba(5, 3, 2, .04));
   }
   .hero-content { width: calc(100% - 36px); margin: 0 18px; padding: 0 0 58px; }
   .hero h1 { font-size: clamp(58px, 18vw, 76px); line-height: .92; }

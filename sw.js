@@ -1,4 +1,4 @@
-const CACHE = "taste-of-life-wijnkast-v5-2-wijnkelder";
+const CACHE = "taste-of-life-wijnkast-v5-3-eigen-wijnkast";
 const ASSETS = [
   "/",
   "/index.html",
