@@ -1,4 +1,4 @@
-const CACHE = "taste-of-life-wijnkast-v5-6-eerste-wijn";
+const CACHE = "taste-of-life-wijnkast-v5-7-volledige-selectie";
 const ASSETS = [
   "/",
   "/index.html",
@@ -9,7 +9,16 @@ const ASSETS = [
   "/manifest.webmanifest",
   "/assets/taste-of-life-logo.jpg",
   "/wijnkelder-hero-v2.jpg",
-  "/caroline-morey-chassagne-montrachet-chambrees-2023.svg"
+  "/caroline-morey-chambrees-2023.png",
+  "/caroline-morey-santenay-2024.png",
+  "/dagueneau-pur-sang-2023.png",
+  "/dagueneau-blanc-etc-2023.png",
+  "/chateau-de-la-cree-meursault-les-tillets-2020.png",
+  "/henri-prudhon-saint-aubin-le-ban-2024.png",
+  "/knoll-ried-schuett-2024.png",
+  "/les-forts-de-latour-2015.png",
+  "/tortochot-charmes-chambertin-2013.png",
+  "/les-horees-rose-bonheur-2023.png"
 ];
 
 self.addEventListener("install", (event) => {

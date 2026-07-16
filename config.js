@@ -1,5 +1,7 @@
 window.WIJNKAST_CONFIG = {
-  demoMode: false,
+  // De huidige selectie staat rechtstreeks in catalogus.js en is dus direct zichtbaar.
+  // Zet dit op false zodra de Supabase-beheeromgeving is aangesloten.
+  demoMode: true,
   supabaseUrl: "",
   supabaseAnonKey: "",
   shopName: "De Wijnkast",
