@@ -528,9 +528,11 @@ dialog h2 {
 .product-actions { margin-top: 10px; display: grid; grid-template-columns: 1fr 34px; gap: 9px; }
 .view-label {
   min-height: 33px;
+  padding: 0 10px;
   display: grid;
   place-items: center;
   color: var(--cream);
+  background: transparent;
   border: 1px solid rgba(214, 169, 95, .54);
   border-radius: 3px;
   font-size: 7px;
@@ -538,6 +540,7 @@ dialog h2 {
   letter-spacing: .12em;
   text-transform: uppercase;
 }
+.view-label:hover { color: #1b110a; background: var(--gold-bright); border-color: var(--gold-bright); }
 .add-button {
   width: 34px;
   min-height: 34px;
@@ -742,6 +745,23 @@ dialog {
   box-shadow: var(--shadow);
 }
 dialog::backdrop { background: rgba(2, 1, 1, .8); backdrop-filter: blur(5px); }
+.product-dialog { width: min(940px, calc(100vw - 24px)); overflow-y: auto; }
+.product-dialog-close { position: absolute; z-index: 3; top: 16px; right: 16px; background: rgba(8, 5, 3, .74); }
+.product-dialog-content { min-height: 570px; display: grid; grid-template-columns: minmax(300px, .92fr) minmax(360px, 1.08fr); }
+.product-detail-image { position: relative; min-height: 570px; overflow: hidden; background: #0a0705; }
+.product-detail-image img { width: 100%; height: 100%; min-height: 570px; object-fit: cover; }
+.product-detail-image .bottle-fallback { position: absolute; inset: 0; }
+.product-detail-copy { padding: clamp(38px, 6vw, 68px); display: flex; flex-direction: column; justify-content: center; }
+.product-detail-copy h2 { color: #fffaf0; font-size: clamp(36px, 5vw, 54px); line-height: 1.02; }
+.product-detail-name { margin: 12px 0 0; color: var(--gold-pale); font-family: var(--serif); font-size: 22px; line-height: 1.25; }
+.product-detail-vintage { margin: 7px 0 0; color: var(--cream-soft); font-family: var(--serif); font-size: 17px; }
+.product-detail-copy .ornament { margin: 24px 0 21px; }
+.product-detail-description { margin: 0; color: rgba(242, 234, 220, .82); font-family: var(--serif); font-size: 16px; line-height: 1.75; }
+.product-detail-purchase { margin-top: 30px; padding-top: 24px; display: flex; align-items: center; justify-content: space-between; gap: 22px; border-top: 1px solid var(--line-soft); }
+.product-detail-purchase > div { display: grid; gap: 6px; }
+.product-detail-purchase strong { color: var(--gold-bright); font-family: var(--serif); font-size: 30px; font-weight: 400; }
+.product-detail-purchase small { color: var(--muted); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+.product-detail-purchase .primary-button:disabled { color: #6e655a; background: #18130f; border-color: var(--line-soft); cursor: not-allowed; }
 .checkout-dialog form { padding: clamp(24px, 5vw, 44px); }
 .form-grid { margin: 26px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .form-grid label { display: grid; gap: 8px; color: var(--muted); font-size: 9px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
@@ -808,6 +828,10 @@ dialog::backdrop { background: rgba(2, 1, 1, .8); backdrop-filter: blur(5px); }
   .benefit-strip article { min-height: 128px; }
   .benefit-strip article:nth-child(3) { border-left: 0; border-top: 1px solid rgba(214, 169, 95, .2); }
   .benefit-strip article:nth-child(4) { border-top: 1px solid rgba(214, 169, 95, .2); }
+  .product-dialog { overflow-y: auto; }
+  .product-dialog-content { min-height: 0; grid-template-columns: 1fr; }
+  .product-detail-image { min-height: 430px; }
+  .product-detail-image img { min-height: 430px; max-height: 55svh; }
 }
 
 @media (max-width: 600px) {
@@ -863,6 +887,16 @@ dialog::backdrop { background: rgba(2, 1, 1, .8); backdrop-filter: blur(5px); }
   .cart-thumb { height: 72px; }
   .form-grid { grid-template-columns: 1fr; }
   .form-grid .full { grid-column: auto; }
+  .product-dialog { max-height: calc(100svh - 16px); width: calc(100vw - 16px); }
+  .product-dialog-close { top: 10px; right: 10px; }
+  .product-detail-image { min-height: 390px; }
+  .product-detail-image img { min-height: 390px; }
+  .product-detail-copy { padding: 31px 22px 25px; }
+  .product-detail-copy h2 { font-size: 37px; }
+  .product-detail-name { font-size: 20px; }
+  .product-detail-description { font-size: 15px; line-height: 1.7; }
+  .product-detail-purchase { align-items: stretch; flex-direction: column; }
+  .product-detail-purchase .primary-button { width: 100%; }
   .success-dialog { padding: 32px 22px; }
 }
 

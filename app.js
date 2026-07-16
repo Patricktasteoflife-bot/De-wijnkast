@@ -2,93 +2,12 @@
   "use strict";
 
   const config = window.WIJNKAST_CONFIG || {};
-  const localPreview = /^(localhost|127\.0\.0\.1)$/.test(location.hostname)
-    && new URLSearchParams(location.search).get("preview") === "1";
-  const demoMode = config.demoMode === true || localPreview;
+  const previewRequested = new URLSearchParams(location.search).get("preview") === "1";
+  const demoMode = config.demoMode === true || previewRequested;
   const backendConfigured = Boolean(config.supabaseUrl && config.supabaseAnonKey);
   const CART_KEY = "tol-wijnkast-cart-v1";
   const CUSTOMER_KEY = "tol-wijnkast-customer-v1";
-
-  const demoProducts = [
-    {
-      id: "demo-giscours-2023",
-      name: "Château Giscours",
-      producer: "Château Giscours",
-      vintage: "2023",
-      region: "Margaux · Bordeaux",
-      country: "Frankrijk",
-      color: "Rood",
-      price_cents: 6350,
-      stock: 1,
-      image_url: "",
-      description: "Een bijzondere laatste fles uit Bordeaux."
-    },
-    {
-      id: "demo-knoll-trum-2025",
-      name: "Ried Trum Federspiel",
-      producer: "Weingut Knoll",
-      vintage: "2025",
-      region: "Wachau",
-      country: "Oostenrijk",
-      color: "Wit",
-      price_cents: 3295,
-      stock: 3,
-      image_url: "",
-      description: "Fris, precies en gemaakt voor een mooie tafel."
-    },
-    {
-      id: "demo-dugat-py-2022",
-      name: "Beaune 1er Cru",
-      producer: "Domaine Dugat-Py",
-      vintage: "2022",
-      region: "Bourgogne",
-      country: "Frankrijk",
-      color: "Rood",
-      price_cents: 12900,
-      stock: 1,
-      image_url: "",
-      description: "Een zeldzame Bourgogne voor de liefhebber."
-    },
-    {
-      id: "demo-sabathi-2017",
-      name: "Ried Jagersberg Chardonnay",
-      producer: "Hannes Sabathi",
-      vintage: "2017",
-      region: "Südsteiermark",
-      country: "Oostenrijk",
-      color: "Wit",
-      price_cents: 2295,
-      stock: 2,
-      image_url: "",
-      description: "Rijk en gelaagd, met mooie spanning."
-    },
-    {
-      id: "demo-ouskool-2021",
-      name: "Wijnskool Ouskool",
-      producer: "Bartho Eksteen",
-      vintage: "2021",
-      region: "Hemel-en-Aarde",
-      country: "Zuid-Afrika",
-      color: "Wit",
-      price_cents: 3495,
-      stock: 1,
-      image_url: "",
-      description: "Karaktervol wit in een zeer kleine oplage."
-    },
-    {
-      id: "demo-murrieta-2012",
-      name: "Castillo Ygay Gran Reserva",
-      producer: "Marqués de Murrieta",
-      vintage: "2012",
-      region: "Rioja",
-      country: "Spanje",
-      color: "Rood",
-      price_cents: 23000,
-      stock: 1,
-      image_url: "",
-      description: "Een klassieke icoonwijn uit Rioja."
-    }
-  ];
+  const previewProducts = Array.isArray(window.WIJNKAST_PRODUCTS) ? window.WIJNKAST_PRODUCTS : [];
 
   const state = {
     products: [],
@@ -120,6 +39,9 @@
     cartSummary: document.querySelector("#cartSummary"),
     cartSubtotal: document.querySelector("#cartSubtotal"),
     checkoutButton: document.querySelector("#checkoutButton"),
+    productDialog: document.querySelector("#productDialog"),
+    productDialogContent: document.querySelector("#productDialogContent"),
+    closeProduct: document.querySelector("#closeProductButton"),
     checkoutDialog: document.querySelector("#checkoutDialog"),
     checkoutForm: document.querySelector("#checkoutForm"),
     closeCheckout: document.querySelector("#closeCheckoutButton"),
@@ -153,6 +75,16 @@
     els.continueShopping.addEventListener("click", closeCart);
     els.backdrop.addEventListener("click", closeCart);
     els.checkoutButton.addEventListener("click", openCheckout);
+    els.closeProduct.addEventListener("click", () => els.productDialog.close());
+    els.productDialog.addEventListener("click", (event) => {
+      if (event.target === els.productDialog) els.productDialog.close();
+    });
+    els.productDialogContent.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-detail-add]");
+      if (!button) return;
+      addToCart(button.dataset.detailAdd);
+      els.productDialog.close();
+    });
     els.closeCheckout.addEventListener("click", () => els.checkoutDialog.close());
     els.closeSuccess.addEventListener("click", () => els.successDialog.close());
     els.checkoutForm.addEventListener("submit", submitOrder);
@@ -163,7 +95,7 @@
 
   async function loadProducts() {
     if (demoMode) {
-      state.products = demoProducts;
+      state.products = previewProducts;
       return;
     }
     if (!backendConfigured) {
@@ -261,7 +193,7 @@
             ${product.vintage ? `<p class="product-vintage">${escapeHtml(product.vintage)}</p>` : ""}
             <strong class="price">${formatMoney(product.price_cents)}</strong>
             <div class="product-actions">
-              <span class="view-label" aria-hidden="true">Bekijk wijn</span>
+              <button class="view-label" type="button" data-view="${escapeAttr(product.id)}">Bekijk wijn</button>
               <button class="add-button" type="button" data-add="${escapeAttr(product.id)}" aria-label="Voeg ${escapeAttr(product.producer || product.name)} toe aan de wijnmand" ${available <= 0 ? "disabled" : ""}>
                 ${available <= 0 ? "✓" : "+"}
               </button>
@@ -272,6 +204,44 @@
     els.grid.querySelectorAll("[data-add]").forEach((button) => {
       button.addEventListener("click", () => addToCart(button.dataset.add));
     });
+    els.grid.querySelectorAll("[data-view]").forEach((button) => {
+      button.addEventListener("click", () => openProduct(button.dataset.view));
+    });
+  }
+
+  function openProduct(productId) {
+    const product = state.products.find((item) => item.id === productId);
+    if (!product) return;
+    const cartQty = Number(state.cart[product.id] || 0);
+    const available = Math.max(0, product.stock - cartQty);
+    const stockText = product.stock === 1 ? "Laatste fles beschikbaar" : `${product.stock} flessen beschikbaar`;
+    const metaParts = [product.country, product.region, product.color]
+      .filter(Boolean)
+      .filter((value, index, values) => values.findIndex((item) => item.toLowerCase() === value.toLowerCase()) === index);
+    const image = product.image_url
+      ? `<img src="${escapeAttr(product.image_url)}" alt="${escapeAttr(product.producer)} ${escapeAttr(product.name)} ${escapeAttr(product.vintage)}" />`
+      : `<div class="bottle-fallback" aria-hidden="true"></div>`;
+
+    els.productDialogContent.innerHTML = `
+      <div class="product-detail-image">${image}</div>
+      <div class="product-detail-copy">
+        <p class="eyebrow">${escapeHtml(metaParts.join(" · "))}</p>
+        <h2 id="productDetailTitle">${escapeHtml(product.producer || product.name)}</h2>
+        ${product.producer && product.producer !== product.name ? `<p class="product-detail-name">${escapeHtml(product.name)}</p>` : ""}
+        ${product.vintage ? `<p class="product-detail-vintage">${escapeHtml(product.vintage)}</p>` : ""}
+        <div class="ornament compact" aria-hidden="true"><span></span><i></i><span></span></div>
+        <p class="product-detail-description">${escapeHtml(product.description || "Een bijzondere fles uit de selectie van Taste of Life.")}</p>
+        <div class="product-detail-purchase">
+          <div>
+            <strong>${formatMoney(product.price_cents)}</strong>
+            <small>${escapeHtml(stockText)}</small>
+          </div>
+          <button class="primary-button" type="button" data-detail-add="${escapeAttr(product.id)}" ${available <= 0 ? "disabled" : ""}>
+            ${available <= 0 ? "In wijnmand" : "Voeg toe aan wijnmand"}
+          </button>
+        </div>
+      </div>`;
+    els.productDialog.showModal();
   }
 
   function addToCart(productId) {

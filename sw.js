@@ -1,13 +1,15 @@
-const CACHE = "taste-of-life-wijnkast-v5-5-titel-volgorde";
+const CACHE = "taste-of-life-wijnkast-v5-6-eerste-wijn";
 const ASSETS = [
   "/",
   "/index.html",
   "/styles.css",
   "/config.js",
+  "/catalogus.js",
   "/app.js",
   "/manifest.webmanifest",
   "/assets/taste-of-life-logo.jpg",
-  "/wijnkelder-hero-v2.jpg"
+  "/wijnkelder-hero-v2.jpg",
+  "/caroline-morey-chassagne-montrachet-chambrees-2023.svg"
 ];
 
 self.addEventListener("install", (event) => {
