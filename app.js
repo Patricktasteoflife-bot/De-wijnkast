@@ -349,12 +349,22 @@
     event.preventDefault();
     if (state.busy || !cartItems().length) return;
     const formData = new FormData(els.checkoutForm);
+    const customerNote = String(formData.get("notes") || "").trim();
+    const businessDetails = [
+      ["Bedrijf", formData.get("company")],
+      ["Adres", formData.get("address")],
+      ["Postcode", formData.get("postalCode")],
+      ["Plaats", formData.get("city")],
+      ["BTW-nummer", formData.get("vatNumber")]
+    ].map(([label, value]) => [label, String(value || "").trim()])
+      .filter(([, value]) => value)
+      .map(([label, value]) => `${label}: ${value}`);
     const customer = {
       name: String(formData.get("name") || "").trim(),
       phone: String(formData.get("phone") || "").trim(),
       email: String(formData.get("email") || "").trim(),
       delivery: String(formData.get("delivery") || "pickup"),
-      notes: String(formData.get("notes") || "").trim()
+      notes: [...businessDetails, customerNote].filter(Boolean).join("\\n")
     };
     if (!customer.name || !customer.phone || !formData.get("adult")) {
       els.formStatus.textContent = "Vul de verplichte gegevens in.";
@@ -374,7 +384,7 @@
       if (!demoMode) await loadProducts();
       renderAll();
       els.checkoutDialog.close();
-      els.successMessage.textContent = `${demoMode ? "Testbestelling" : "Bestelling"} ${result.order_number} is ontvangen. We nemen persoonlijk contact met je op over ophalen of verzenden.`;
+      els.successMessage.textContent = `${demoMode ? "Testreservering" : "Reservering"} ${result.order_number} is vastgelegd. We nemen persoonlijk contact met je op over ophalen of verzenden.`;
       els.successDialog.showModal();
       els.checkoutForm.reset();
       prefillCustomer();
@@ -385,7 +395,7 @@
     } finally {
       state.busy = false;
       els.placeOrderButton.disabled = false;
-      els.placeOrderButton.textContent = "Bestelling plaatsen";
+      els.placeOrderButton.textContent = "Reservering plaatsen";
     }
   }
 
@@ -399,7 +409,7 @@
       })
     });
     const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(body.message || body.error || "Bestellen is niet gelukt.");
+    if (!response.ok) throw new Error(body.message || body.error || "Reserveren is niet gelukt.");
     return Array.isArray(body) ? body[0] : body;
   }
 
@@ -449,7 +459,7 @@
   function friendlyOrderError(error) {
     const message = String(error.message || "");
     if (/voorraad|stock|available/i.test(message)) return "Eén van deze flessen is net verkocht. De wijnkast is bijgewerkt.";
-    return message || "De bestelling kon niet worden geplaatst. Probeer het opnieuw.";
+    return message || "De reservering kon niet worden geplaatst. Probeer het opnieuw.";
   }
 
   function trimSlash(value) { return String(value || "").replace(/\/$/, ""); }

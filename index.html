@@ -161,7 +161,7 @@
     <dialog class="checkout-dialog" id="checkoutDialog">
       <form id="checkoutForm" method="dialog">
         <div class="dialog-heading">
-          <div><p class="eyebrow">Bijna van jou</p><h2>Bestelling afronden</h2></div>
+          <div><p class="eyebrow">Bijna gereserveerd</p><h2>Flessen reserveren</h2></div>
           <button class="close-button" id="closeCheckoutButton" type="button" aria-label="Sluiten">×</button>
         </div>
         <div class="form-grid">
@@ -175,14 +175,19 @@
               <option value="shipping">Verzenden</option>
             </select>
           </label>
+          <label class="full"><span>Bedrijfsnaam <em>(optioneel)</em></span><input name="company" autocomplete="organization" /></label>
+          <label class="full"><span>Straat en huisnummer <em>(optioneel)</em></span><input name="address" autocomplete="street-address" /></label>
+          <label><span>Postcode <em>(optioneel)</em></span><input name="postalCode" autocomplete="postal-code" /></label>
+          <label><span>Plaats <em>(optioneel)</em></span><input name="city" autocomplete="address-level2" /></label>
+          <label class="full"><span>BTW-nummer <em>(optioneel)</em></span><input name="vatNumber" autocomplete="off" /></label>
           <label class="full"><span>Opmerking</span><textarea name="notes" rows="3" placeholder="Bijvoorbeeld: graag bewaren tot mijn doos vol is"></textarea></label>
           <label class="checkbox full">
             <input name="adult" type="checkbox" required />
-            <span>Ik ben 18 jaar of ouder en controleer mijn bestelling.</span>
+            <span>Ik ben 18 jaar of ouder en controleer mijn reservering.</span>
           </label>
         </div>
         <div class="checkout-total"><span>Totaal</span><strong id="checkoutTotal">€ 0,00</strong></div>
-        <button class="primary-button wide" id="placeOrderButton" type="submit">Bestelling plaatsen</button>
+        <button class="primary-button wide" id="placeOrderButton" type="submit">Reservering plaatsen</button>
         <p class="form-status" id="formStatus" role="status"></p>
       </form>
     </dialog>
