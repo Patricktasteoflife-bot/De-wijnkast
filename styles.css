@@ -640,17 +640,47 @@ dialog h2 {
 footer {
   min-height: 125px;
   padding: 24px clamp(22px, 5vw, 72px);
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: center;
-  gap: 17px;
+  gap: 28px;
   color: var(--muted);
   background: #040302;
   border-top: 1px solid rgba(214, 169, 95, .18);
 }
-footer img { width: 70px; height: 70px; object-fit: cover; border: 1px solid var(--line-soft); }
-footer p { margin: 0 0 6px; color: var(--cream); font-family: var(--serif); font-size: 22px; }
-footer small { font-size: 9px; letter-spacing: .1em; }
+.footer-brand {
+  grid-column: 2;
+  display: flex;
+  align-items: center;
+  gap: 17px;
+}
+.footer-brand img { width: 70px; height: 70px; object-fit: cover; border: 1px solid var(--line-soft); }
+.footer-brand p { margin: 0 0 6px; color: var(--cream); font-family: var(--serif); font-size: 22px; }
+.footer-brand small { font-size: 9px; letter-spacing: .1em; }
+.footer-verse {
+  grid-column: 3;
+  justify-self: end;
+  align-self: end;
+  margin: 0;
+  max-width: 370px;
+  text-align: right;
+}
+.footer-verse p {
+  margin: 0 0 7px;
+  color: var(--cream);
+  font-family: var(--serif);
+  font-size: clamp(15px, 1.35vw, 19px);
+  font-style: italic;
+  line-height: 1.45;
+}
+.footer-verse cite {
+  color: var(--gold-pale);
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
 
 /* Cart and dialogs */
 .floating-cart {
@@ -832,6 +862,19 @@ dialog::backdrop { background: rgba(2, 1, 1, .8); backdrop-filter: blur(5px); }
   .product-dialog-content { min-height: 0; grid-template-columns: 1fr; }
   .product-detail-image { min-height: 430px; }
   .product-detail-image img { min-height: 430px; max-height: 55svh; }
+  footer {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+  .footer-brand { grid-column: 1; justify-self: start; }
+  .footer-verse {
+    grid-column: 1;
+    justify-self: end;
+    max-width: 330px;
+  }
+  body:has(.floating-cart:not([hidden])) footer {
+    padding-bottom: calc(100px + env(safe-area-inset-bottom));
+  }
 }
 
 @media (max-width: 600px) {
@@ -881,7 +924,7 @@ dialog::backdrop { background: rgba(2, 1, 1, .8); backdrop-filter: blur(5px); }
   .benefit-strip h3 { font-size: 15px; }
   .benefit-strip p { font-size: 10px; }
   .about { min-height: 290px; padding: 64px 22px; }
-  footer { justify-content: flex-start; }
+  footer { padding-bottom: 32px; }
   .cart-drawer { padding: 23px 17px max(18px, env(safe-area-inset-bottom)); }
   .cart-line { grid-template-columns: 58px 1fr auto; gap: 11px; }
   .cart-thumb { height: 72px; }
