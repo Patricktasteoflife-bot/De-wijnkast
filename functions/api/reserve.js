@@ -34,8 +34,8 @@ export async function onRequestPost({ request, env }) {
 
   const baseUrl = String(env.SUPABASE_URL).replace(/\/$/, "");
   const headers = {
-    apikey: request.headers.get("apikey") || env.SUPABASE_SERVICE_ROLE_KEY,
-    Authorization: request.headers.get("Authorization") || `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+    apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+    Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
     "Content-Type": "application/json"
   };
 
@@ -101,7 +101,8 @@ export async function onRequestPost({ request, env }) {
     method: "POST",
     headers: {
       Authorization: `Bearer ${env.RESEND_API_KEY}`,
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
+      "User-Agent": "De-Wijnkast/1.0"
     },
     body: JSON.stringify({
       from: env.RESEND_FROM || "De Wijnkast <onboarding@resend.dev>",
@@ -111,9 +112,28 @@ export async function onRequestPost({ request, env }) {
     })
   });
 
+  const emailBody = await emailResponse.text();
+
   if (!emailResponse.ok) {
-    console.error("Reserveringsmail niet verzonden", await emailResponse.text());
+    console.error("Reserveringsmail niet verzonden", emailResponse.status, emailBody);
+    return reply({
+      ...result,
+      notification_sent: false,
+      notification_status: emailResponse.status
+    });
   }
 
-  return reply(result);
+  let emailResult = {};
+  try {
+    emailResult = JSON.parse(emailBody);
+  } catch {
+    // Een succesvolle Resend-reactie hoort JSON te zijn, maar de reservering
+    // blijft geldig wanneer alleen de bevestigingsmetadata ontbreekt.
+  }
+
+  return reply({
+    ...result,
+    notification_sent: true,
+    notification_id: emailResult.id || null
+  });
 }
