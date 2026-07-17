@@ -146,6 +146,87 @@ test("een voorraadfout start geen e-mailtaak", async (t) => {
   assert.match((await response.json()).error, /Onvoldoende voorraad/);
 });
 
+test("een databaseschemafout lekt geen technische details en blijft onzeker", async (t) => {
+  const originalFetch = globalThis.fetch;
+  t.after(() => { globalThis.fetch = originalFetch; });
+
+  globalThis.fetch = async () => new Response(JSON.stringify({
+    code: "42703",
+    message: 'column "producer" of relation "order_items" does not exist'
+  }), {
+    status: 400,
+    headers: { "Content-Type": "application/json" }
+  });
+
+  let backgroundStarted = false;
+  const response = await onRequestPost({
+    request: requestFor(),
+    env,
+    waitUntil() { backgroundStarted = true; }
+  });
+
+  assert.equal(response.status, 502);
+  assert.equal(backgroundStarted, false);
+  const body = await response.json();
+  assert.equal(body.code, "ORDER_BACKEND_ERROR");
+  assert.doesNotMatch(body.error, /producer|order_items|column/i);
+  assert.match(body.error, /Probeer niet opnieuw/);
+});
+
+test("een niet-controleerbare bestaande aanvraag blijft onzeker", async (t) => {
+  const originalFetch = globalThis.fetch;
+  t.after(() => { globalThis.fetch = originalFetch; });
+
+  globalThis.fetch = async () => new Response(JSON.stringify({
+    code: "P0001",
+    message: "Bestaande reservering kon niet worden gecontroleerd."
+  }), {
+    status: 400,
+    headers: { "Content-Type": "application/json" }
+  });
+
+  const response = await onRequestPost({ request: requestFor(), env, waitUntil() {} });
+  assert.equal(response.status, 502);
+  const body = await response.json();
+  assert.equal(body.code, "ORDER_BACKEND_ERROR");
+  assert.match(body.error, /Probeer niet opnieuw/);
+});
+
+test("een technische suffix achter een bekende fout lekt niet", async (t) => {
+  const originalFetch = globalThis.fetch;
+  t.after(() => { globalThis.fetch = originalFetch; });
+
+  globalThis.fetch = async () => new Response(JSON.stringify({
+    code: "42703",
+    message: 'Onvoldoende voorraad voor één van de gekozen flessen. column "producer" ontbreekt'
+  }), {
+    status: 400,
+    headers: { "Content-Type": "application/json" }
+  });
+
+  const response = await onRequestPost({ request: requestFor(), env, waitUntil() {} });
+  assert.equal(response.status, 502);
+  const body = await response.json();
+  assert.equal(body.code, "ORDER_BACKEND_ERROR");
+  assert.doesNotMatch(body.error, /producer|column/i);
+});
+
+test("een bekende fouttekst op upstream 5xx blijft onzeker", async (t) => {
+  const originalFetch = globalThis.fetch;
+  t.after(() => { globalThis.fetch = originalFetch; });
+
+  globalThis.fetch = async () => new Response(JSON.stringify({
+    message: "Onvoldoende voorraad voor één van de gekozen flessen."
+  }), {
+    status: 503,
+    headers: { "Content-Type": "application/json" }
+  });
+
+  const response = await onRequestPost({ request: requestFor(), env, waitUntil() {} });
+  assert.equal(response.status, 502);
+  assert.equal((await response.json()).code, "ORDER_BACKEND_ERROR");
+});
+
 test("een ontbrekende aanvraag-ID bereikt de database niet", async (t) => {
   const originalFetch = globalThis.fetch;
   t.after(() => { globalThis.fetch = originalFetch; });

@@ -11,6 +11,19 @@ const ORDER_TIMEOUT_MS = 10000;
 const EMAIL_TIMEOUT_MS = 5000;
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,99}$/;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const EXPECTED_ORDER_ERRORS = new Set([
+  "Naam ontbreekt.",
+  "Mobiel nummer ontbreekt.",
+  "De wijnmand is leeg.",
+  "Een reservering kan maximaal 25 verschillende wijnen bevatten.",
+  "Een reservering kan maximaal 99 flessen bevatten.",
+  "Aanvraag-ID ontbreekt.",
+  "Ongeldige aanvraag-ID.",
+  "Ongeldig product of aantal.",
+  "Ongeldig aantal.",
+  "Onvoldoende voorraad voor één van de gekozen flessen.",
+  "Deze aanvraag-ID hoort bij een andere reservering."
+]);
 
 const timeoutFromEnv = (value, fallback) => {
   const parsed = Number(value);
@@ -180,9 +193,14 @@ export async function onRequestPost(context) {
   }
 
   if (!orderResponse.ok) {
+    const upstreamMessage = String(orderBody.message || orderBody.error || "").trim();
+    const expectedRejection = orderResponse.status === 400 && EXPECTED_ORDER_ERRORS.has(upstreamMessage);
     return reply({
-      error: orderBody.message || orderBody.error || "Reserveren is niet gelukt."
-    }, orderResponse.status >= 500 ? 502 : 400);
+      error: expectedRejection
+        ? upstreamMessage
+        : "De reservering kon niet veilig worden verwerkt. Probeer niet opnieuw en neem contact op.",
+      code: expectedRejection ? "ORDER_REJECTED" : "ORDER_BACKEND_ERROR"
+    }, expectedRejection ? 400 : 502);
   }
 
   const result = Array.isArray(orderBody) ? orderBody[0] : orderBody;

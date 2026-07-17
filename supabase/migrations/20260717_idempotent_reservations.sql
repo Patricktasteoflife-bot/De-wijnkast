@@ -4,6 +4,17 @@
 
 begin;
 
+-- Oudere live projecten hadden niet alle kolommen uit het huidige schema.
+-- Voeg ze vóór de functie toe; bestaande orderwaarden blijven intact.
+alter table public.orders
+add column if not exists updated_at timestamptz not null default now();
+
+alter table public.order_items
+add column if not exists producer text;
+
+alter table public.order_items
+add column if not exists vintage text;
+
 alter table public.orders
 add column if not exists client_request_id text;
 

@@ -22,6 +22,7 @@ const requiredFiles = [
   "assets/wijnkast-hero.png",
   "supabase/schema.sql",
   "supabase/migrations/20260717_idempotent_reservations.sql",
+  "supabase/migrations/20260717_order_schema_compatibility.sql",
   "supabase/migrations/20260717_beheeromgeving.sql",
   "supabase/migrations/20260717_beheer_productrechten.sql",
   "integration/admin-connector.js",
@@ -49,6 +50,7 @@ if (!reserve.includes('"Idempotency-Key"')) throw new Error("Dubbele Resend-mail
 if (!app.includes("PENDING_ORDER_KEY")) throw new Error("Bescherming tegen dubbel reserveren ontbreekt.");
 if (!app.includes("request_id: requestId")) throw new Error("Aanvraag-ID wordt niet meegestuurd.");
 const schema = fs.readFileSync(path.join(root, "supabase/schema.sql"), "utf8");
+const orderCompatibilityMigration = fs.readFileSync(path.join(root, "supabase/migrations/20260717_order_schema_compatibility.sql"), "utf8");
 if (!schema.includes("enable row level security")) {
   throw new Error("Row Level Security ontbreekt.");
 }
@@ -59,6 +61,15 @@ if (!schema.includes("Aanvraag-ID ontbreekt.") || !schema.includes("sha256(conve
   throw new Error("Verplichte aanvraag-ID of draagbare fingerprint ontbreekt.");
 }
 if (!schema.includes("order by product_id")) throw new Error("Vaste voorraad-lockvolgorde ontbreekt.");
+for (const column of ["orders\nadd column if not exists updated_at", "order_items\nadd column if not exists producer", "order_items\nadd column if not exists vintage"]) {
+  if (!orderCompatibilityMigration.includes(column)) throw new Error(`Compatibiliteitskolom ontbreekt: ${column}`);
+}
+if (/^\s*(?:insert\s+into|update|delete\s+from)\s+public[.](?:products|orders|order_items)\b/im.test(orderCompatibilityMigration)) {
+  throw new Error("De ordercompatibiliteitsmigratie mag geen product- of ordergegevens wijzigen.");
+}
+if (!reserve.includes("ORDER_BACKEND_ERROR") || !reserve.includes("EXPECTED_ORDER_ERRORS")) {
+  throw new Error("Technische databasefouten worden aan klanten getoond.");
+}
 
 const adminHtml = fs.readFileSync(path.join(root, "beheer.html"), "utf8");
 const adminApp = fs.readFileSync(path.join(root, "beheer.js"), "utf8");

@@ -43,6 +43,8 @@ Open daarna `http://localhost:4173`. Zonder gekoppelde voorraad toont de offici�
 
 Voer één keer `supabase/migrations/20260717_idempotent_reservations.sql` uit in de Supabase SQL Editor. Deze migratie houdt dezelfde RPC-naam aan en voegt alleen de unieke aanvraag-ID toe, zodat een retry dezelfde order teruggeeft zonder nogmaals voorraad te verminderen.
 
+Heeft het bestaande project oudere ordertabellen, voer dan eerst `supabase/migrations/20260717_order_schema_compatibility.sql` uit. Deze idempotente migratie vult alleen de ontbrekende orderkolommen aan en maakt geen reservering of voorraadwijziging.
+
 Voer daarna één keer `supabase/migrations/20260717_beheeromgeving.sql` uit. Deze migratie wijzigt geen voorraad of orders. Ze voegt alleen de beveiligde beheerrechten, openbare websiteteksten en bescherming tegen gelijktijdige voorraadwijzigingen toe. Voer bij een bestaand project vervolgens ook `supabase/migrations/20260717_beheer_productrechten.sql` uit om de minimaal benodigde lees-, toevoeg- en wijzigrechten voor producten opnieuw vast te leggen; dit script verandert zelf geen productgegevens.
 
 De Cloudflare Pages productieomgeving gebruikt:
