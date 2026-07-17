@@ -662,23 +662,24 @@ footer {
   justify-self: end;
   align-self: end;
   margin: 0;
-  max-width: 370px;
+  max-width: 300px;
   text-align: right;
 }
 .footer-verse p {
-  margin: 0 0 7px;
-  color: var(--cream);
+  margin: 0 0 5px;
+  color: rgba(242, 234, 220, .72);
   font-family: var(--serif);
-  font-size: clamp(15px, 1.35vw, 19px);
+  font-size: 12px;
   font-style: italic;
-  line-height: 1.45;
+  line-height: 1.5;
+  letter-spacing: .015em;
 }
 .footer-verse cite {
-  color: var(--gold-pale);
-  font-size: 9px;
+  color: rgba(229, 197, 133, .78);
+  font-size: 7px;
   font-style: normal;
   font-weight: 700;
-  letter-spacing: .16em;
+  letter-spacing: .14em;
   text-transform: uppercase;
 }
 
@@ -870,7 +871,7 @@ dialog::backdrop { background: rgba(2, 1, 1, .8); backdrop-filter: blur(5px); }
   .footer-verse {
     grid-column: 1;
     justify-self: end;
-    max-width: 330px;
+    max-width: 280px;
   }
   body:has(.floating-cart:not([hidden])) footer {
     padding-bottom: calc(100px + env(safe-area-inset-bottom));
