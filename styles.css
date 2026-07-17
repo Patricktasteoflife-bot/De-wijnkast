@@ -97,7 +97,7 @@ img { max-width: 100%; display: block; }
   font-weight: 400;
   line-height: .95;
   letter-spacing: -.025em;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 .brand-copy small {
   color: var(--gold-bright);
@@ -221,7 +221,7 @@ img { max-width: 100%; display: block; }
   line-height: .94;
   letter-spacing: -.045em;
 }
-.hero h1 span { color: #fffdf7; white-space: nowrap; }
+.hero h1 span { color: #fffdf7; overflow-wrap: anywhere; text-wrap: balance; }
 .hero h1 em {
   margin-top: 12px;
   color: var(--gold-bright);
@@ -272,7 +272,7 @@ img { max-width: 100%; display: block; }
   transition: color .2s ease, background .2s ease, border-color .2s ease;
 }
 .hero .outline-button { margin-top: 30px; }
-.outline-button span { font-size: 25px; font-weight: 300; line-height: 0; }
+.outline-button .button-arrow { font-size: 25px; font-weight: 300; line-height: 0; }
 .outline-button:hover,
 .primary-button:hover { color: #130d08; background: var(--gold-bright); border-color: var(--gold-bright); }
 .primary-button { background: linear-gradient(135deg, #6f1325, #3e0915); }
@@ -357,7 +357,7 @@ dialog h2 {
 }
 .collection-options summary::-webkit-details-marker { display: none; }
 .collection-options summary:hover { background: rgba(77, 23, 15, .72); }
-.collection-options summary span { font-size: 22px; font-weight: 300; }
+.collection-options summary .button-arrow { font-size: 22px; font-weight: 300; }
 .options-panel {
   position: absolute;
   top: calc(100% + 10px);
@@ -682,6 +682,8 @@ footer {
   letter-spacing: .14em;
   text-transform: uppercase;
 }
+
+.site-setting-multiline { white-space: pre-line; }
 
 /* Cart and dialogs */
 .floating-cart {

@@ -10,6 +10,42 @@
   const PENDING_ORDER_KEY = "tol-wijnkast-pending-order-v1";
   const PENDING_RECONCILE_TTL = 5 * 60 * 1000;
   const previewProducts = Array.isArray(window.WIJNKAST_PRODUCTS) ? window.WIJNKAST_PRODUCTS : [];
+  const SITE_SETTING_RULES = Object.freeze({
+    "site.browser_title": { target: "title", max: 100 },
+    "site.meta_description": { target: "description", max: 240 },
+    "brand.name": { selector: '[data-site-setting="brand.name"]', max: 40 },
+    "brand.subtitle": { selector: '[data-site-setting="brand.subtitle"]', max: 60 },
+    "nav.home": { selector: '[data-site-setting="nav.home"]', max: 30 },
+    "nav.wines": { selector: '[data-site-setting="nav.wines"]', max: 30 },
+    "nav.selection": { selector: '[data-site-setting="nav.selection"]', max: 40 },
+    "nav.about": { selector: '[data-site-setting="nav.about"]', max: 40 },
+    "nav.contact": { selector: '[data-site-setting="nav.contact"]', max: 30 },
+    "hero.title": { selector: '[data-site-setting="hero.title"]', max: 40 },
+    "hero.tagline": { selector: '[data-site-setting="hero.tagline"]', max: 80 },
+    "hero.body": { selector: '[data-site-setting="hero.body"]', max: 360, multiline: true },
+    "hero.cta": { selector: '[data-site-setting="hero.cta"]', max: 40 },
+    "collection.eyebrow": { selector: '[data-site-setting="collection.eyebrow"]', max: 60 },
+    "collection.title": { selector: '[data-site-setting="collection.title"]', max: 100 },
+    "collection.body": { selector: '[data-site-setting="collection.body"]', max: 300, multiline: true },
+    "collection.options": { selector: '[data-site-setting="collection.options"]', max: 40 },
+    "empty.title": { selector: '[data-site-setting="empty.title"]', max: 100 },
+    "empty.body": { selector: '[data-site-setting="empty.body"]', max: 240, multiline: true },
+    "benefit.exclusive.title": { selector: '[data-site-setting="benefit.exclusive.title"]', max: 50 },
+    "benefit.exclusive.body": { selector: '[data-site-setting="benefit.exclusive.body"]', max: 140, multiline: true },
+    "benefit.available.title": { selector: '[data-site-setting="benefit.available.title"]', max: 50 },
+    "benefit.available.body": { selector: '[data-site-setting="benefit.available.body"]', max: 140, multiline: true },
+    "benefit.care.title": { selector: '[data-site-setting="benefit.care.title"]', max: 50 },
+    "benefit.care.body": { selector: '[data-site-setting="benefit.care.body"]', max: 140, multiline: true },
+    "benefit.personal.title": { selector: '[data-site-setting="benefit.personal.title"]', max: 50 },
+    "benefit.personal.body": { selector: '[data-site-setting="benefit.personal.body"]', max: 140, multiline: true },
+    "about.eyebrow": { selector: '[data-site-setting="about.eyebrow"]', max: 60 },
+    "about.title": { selector: '[data-site-setting="about.title"]', max: 100 },
+    "about.body": { selector: '[data-site-setting="about.body"]', max: 300, multiline: true },
+    "footer.name": { selector: '[data-site-setting="footer.name"]', max: 60 },
+    "footer.tagline": { selector: '[data-site-setting="footer.tagline"]', max: 180, multiline: true },
+    "footer.verse": { selector: '[data-site-setting="footer.verse"]', max: 300, multiline: true },
+    "footer.verse_reference": { selector: '[data-site-setting="footer.verse_reference"]', max: 80 }
+  });
 
   const state = {
     products: [],
@@ -63,6 +99,7 @@
     bindEvents();
     prefillCustomer();
     const pendingOrder = applyPendingOrderGuard();
+    void loadSiteSettings();
     await loadProducts();
     renderAll();
     registerServiceWorker();
@@ -71,6 +108,46 @@
     } else if (pendingOrder) {
       void reconcilePendingOrder(pendingOrder, 500);
     }
+  }
+
+  async function loadSiteSettings() {
+    if (!backendConfigured || demoMode) return;
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), 4000);
+    try {
+      const response = await fetch(`${trimSlash(config.supabaseUrl)}/rest/v1/site_settings?select=key,value&order=sort_order.asc`, {
+        headers: apiHeaders(),
+        signal: controller.signal
+      });
+      if (!response.ok) return;
+      const rows = await response.json();
+      if (!Array.isArray(rows)) return;
+      rows.forEach(applySiteSetting);
+    } catch {
+      // De vaste HTML-teksten blijven altijd als veilige fallback staan.
+    } finally {
+      window.clearTimeout(timer);
+    }
+  }
+
+  function applySiteSetting(row) {
+    const rule = SITE_SETTING_RULES[row?.key];
+    if (!rule || typeof row.value !== "string") return;
+    const value = row.value.replace(/\r\n?/g, "\n").trim();
+    if (!value || value.length > rule.max) return;
+    if (rule.target === "title") {
+      document.title = value;
+      return;
+    }
+    if (rule.target === "description") {
+      const description = document.querySelector("#siteDescription");
+      if (description) description.content = value;
+      return;
+    }
+    const element = document.querySelector(rule.selector);
+    if (!element) return;
+    element.textContent = value;
+    if (rule.multiline) element.classList.add("site-setting-multiline");
   }
 
   function bindEvents() {

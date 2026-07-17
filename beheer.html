@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#080604" />
+    <meta name="robots" content="noindex, nofollow, noarchive" />
+    <meta name="referrer" content="no-referrer" />
+    <title>Beheer | De Wijnkast van Taste of Life</title>
+    <link rel="icon" href="assets/taste-of-life-logo.jpg" />
+    <link rel="stylesheet" href="beheer.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#mainContent">Ga naar de inhoud</a>
+
+    <header class="admin-header">
+      <a class="admin-brand" href="/" aria-label="De Wijnkast bekijken">
+        <img src="assets/taste-of-life-logo.jpg" alt="" />
+        <span>
+          <strong>De Wijnkast van Taste of Life</strong>
+          <small>Beheer</small>
+        </span>
+      </a>
+      <div class="header-actions">
+        <a class="quiet-button" href="/" target="_blank" rel="noopener">Bekijk winkel</a>
+        <button class="quiet-button" id="logoutButton" type="button" hidden>Uitloggen</button>
+      </div>
+    </header>
+
+    <main id="mainContent">
+      <section class="login-view" id="loginView" aria-labelledby="loginTitle">
+        <div class="login-card">
+          <p class="eyebrow">Privébeheer</p>
+          <h1 id="loginTitle">Zelf je wijnkast bijwerken</h1>
+          <p class="intro-copy">
+            Je ontvangt een beveiligde inloglink per e-mail. Er is geen wachtwoord nodig.
+          </p>
+          <form id="loginForm">
+            <p class="owner-email">patrick.tasteoflife@hotmail.com</p>
+            <button class="primary-button" id="loginButton" type="submit">Stuur mij de inloglink</button>
+          </form>
+          <p class="form-message" id="loginMessage" role="status" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section class="loading-view" id="loadingView" aria-live="polite" hidden>
+        <span class="spinner" aria-hidden="true"></span>
+        <p id="loadingMessage">Beheeromgeving laden…</p>
+      </section>
+
+      <section class="admin-view" id="adminView" hidden>
+        <div class="admin-heading">
+          <div>
+            <p class="eyebrow">Taste of Life</p>
+            <h1>De Wijnkast beheren</h1>
+            <p>Wijzig hier zelf je wijnen en de zichtbare teksten van de website.</p>
+          </div>
+          <button class="quiet-button refresh-button" id="refreshButton" type="button">Opnieuw laden</button>
+        </div>
+
+        <nav class="admin-tabs" role="tablist" aria-label="Beheeronderdelen">
+          <button
+            class="tab-button active"
+            id="productsTab"
+            type="button"
+            role="tab"
+            aria-selected="true"
+            aria-controls="productsPanel"
+            data-tab="products"
+          >
+            Wijnen
+          </button>
+          <button
+            class="tab-button"
+            id="settingsTab"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="settingsPanel"
+            data-tab="settings"
+          >
+            Website
+          </button>
+        </nav>
+
+        <section class="tab-panel" id="productsPanel" role="tabpanel" aria-labelledby="productsTab">
+          <div class="panel-toolbar">
+            <label class="search-field">
+              <span class="sr-only">Zoek een wijn</span>
+              <input id="productSearch" type="search" placeholder="Zoek op wijn, producent of SKU" autocomplete="off" />
+            </label>
+            <button class="primary-button compact" id="newProductButton" type="button">Nieuwe wijn</button>
+          </div>
+          <div class="panel-status" id="productsStatus" role="status"></div>
+          <div class="product-list" id="productList"></div>
+          <div class="empty-panel" id="productsEmpty" hidden>
+            <p>Geen wijnen gevonden.</p>
+          </div>
+        </section>
+
+        <section class="tab-panel" id="settingsPanel" role="tabpanel" aria-labelledby="settingsTab" hidden>
+          <div class="settings-intro">
+            <div>
+              <h2>Teksten van de website</h2>
+              <p>Pas alleen de tekst aan. De stijl en veilige reserveringsmeldingen blijven beschermd.</p>
+            </div>
+          </div>
+          <form id="settingsForm">
+            <div class="settings-sections" id="settingsSections"></div>
+            <div class="empty-panel" id="settingsEmpty" hidden>
+              <p>De website-instellingen zijn nog niet beschikbaar.</p>
+            </div>
+          </form>
+        </section>
+      </section>
+    </main>
+
+    <div class="save-bar" id="settingsSaveBar" hidden>
+      <span>Je hebt wijzigingen die nog niet zijn opgeslagen.</span>
+      <div>
+        <button class="quiet-button" id="resetSettingsButton" type="button">Annuleren</button>
+        <button class="primary-button compact" id="saveSettingsButton" type="button">Teksten opslaan</button>
+      </div>
+    </div>
+
+    <dialog class="product-editor" id="productDialog" aria-labelledby="productDialogTitle">
+      <form id="productForm">
+        <div class="dialog-header">
+          <div>
+            <p class="eyebrow" id="productDialogEyebrow">Wijn bewerken</p>
+            <h2 id="productDialogTitle">Wijn</h2>
+          </div>
+          <button class="icon-button" id="closeProductDialog" type="button" aria-label="Sluiten">×</button>
+        </div>
+
+        <div class="editor-grid">
+          <label>
+            <span>Naam *</span>
+            <input name="name" required maxlength="160" autocomplete="off" />
+          </label>
+          <label>
+            <span>Producent</span>
+            <input name="producer" maxlength="160" autocomplete="off" />
+          </label>
+          <label>
+            <span>Jaargang</span>
+            <input name="vintage" maxlength="20" inputmode="numeric" autocomplete="off" />
+          </label>
+          <label>
+            <span>SKU / artikelcode</span>
+            <input name="sku" maxlength="80" autocomplete="off" />
+          </label>
+          <label>
+            <span>Regio</span>
+            <input name="region" maxlength="160" autocomplete="off" />
+          </label>
+          <label>
+            <span>Land</span>
+            <input name="country" maxlength="100" autocomplete="off" />
+          </label>
+          <label>
+            <span>Soort / kleur *</span>
+            <input name="color" list="wineColors" maxlength="40" required autocomplete="off" />
+            <datalist id="wineColors">
+              <option value="Wit"></option>
+              <option value="Rood"></option>
+              <option value="Rosé"></option>
+              <option value="Mousserend"></option>
+              <option value="Dessert"></option>
+              <option value="Overig"></option>
+            </datalist>
+          </label>
+          <label>
+            <span>Volgorde</span>
+            <input name="sort_order" type="number" min="0" max="9999" step="1" inputmode="numeric" />
+            <small>Een lager nummer staat eerder in het beheer.</small>
+          </label>
+          <label>
+            <span>Prijs per fles *</span>
+            <span class="money-input"><b>€</b><input name="price" required inputmode="decimal" placeholder="62,50" autocomplete="off" /></span>
+          </label>
+          <label>
+            <span>Voorraad *</span>
+            <span class="stock-input">
+              <button type="button" data-stock-step="-1" aria-label="Eén fles minder">−</button>
+              <input name="stock" type="number" min="0" max="9999" step="1" required inputmode="numeric" />
+              <button type="button" data-stock-step="1" aria-label="Eén fles meer">+</button>
+            </span>
+            <small>Bij voorraad 0 verdwijnt de wijn uit de winkel.</small>
+          </label>
+          <label class="full-width">
+            <span>Afbeeldingspad of https-URL</span>
+            <input name="image_url" maxlength="1000" autocomplete="off" />
+            <small>Bijvoorbeeld <code>mijn-wijn.png</code> of een beveiligde https-link.</small>
+          </label>
+          <label class="full-width">
+            <span>Omschrijving</span>
+            <textarea name="description" rows="7" maxlength="3000"></textarea>
+            <small>Deze tekst ziet de klant na het openen van “Bekijk wijn”.</small>
+          </label>
+          <label class="toggle-row full-width">
+            <input name="active" type="checkbox" />
+            <span>
+              <strong>Tonen in de app</strong>
+              <small>Zet dit uit om de wijn tijdelijk te verbergen zonder hem te verwijderen.</small>
+            </span>
+          </label>
+        </div>
+
+        <p class="form-message" id="productMessage" role="status" aria-live="polite"></p>
+        <div class="dialog-actions">
+          <button class="quiet-button" id="cancelProductButton" type="button">Annuleren</button>
+          <button class="primary-button compact" id="saveProductButton" type="submit">Wijn opslaan</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script src="config.js"></script>
+    <script src="vendor/supabase.min.js"></script>
+    <script src="beheer.js" defer></script>
+  </body>
+</html>

@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#080604" />
-    <meta name="description" content="De Wijnkast van Taste of Life: persoonlijk geselecteerde wijnen uit mijn eigen kast." />
-    <title>De Wijnkast | Taste of Life</title>
+    <meta id="siteDescription" name="description" content="De Wijnkast van Taste of Life: persoonlijk geselecteerde wijnen uit mijn eigen kast." />
+    <title>De Wijnkast van Taste of Life</title>
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/taste-of-life-logo.jpg" />
     <link rel="stylesheet" href="styles.css" />
@@ -18,17 +18,17 @@
         <a class="brand" href="#top" aria-label="De Wijnkast, naar boven">
           <img src="assets/taste-of-life-logo.jpg" alt="Taste of Life Wijnhandel" />
           <span class="brand-copy">
-            <strong>De Wijnkast</strong>
-            <small>Taste of Life</small>
+            <strong data-site-setting="brand.name">De Wijnkast</strong>
+            <small data-site-setting="brand.subtitle">van Taste of Life</small>
           </span>
         </a>
 
         <nav class="main-nav" aria-label="Hoofdnavigatie">
-          <a class="active" href="#top">Home</a>
-          <a href="#collectie">Wijnen</a>
-          <a href="#collectie">Patrick's Selectie</a>
-          <a href="#over">Over Taste of Life</a>
-          <a href="#contact">Contact</a>
+          <a class="active" href="#top" data-site-setting="nav.home">Home</a>
+          <a href="#collectie" data-site-setting="nav.wines">Wijnen</a>
+          <a href="#collectie" data-site-setting="nav.selection">Patrick's Selectie</a>
+          <a href="#over" data-site-setting="nav.about">Over Taste of Life</a>
+          <a href="#contact" data-site-setting="nav.contact">Contact</a>
         </nav>
 
         <button class="cart-trigger" id="headerCartButton" type="button" aria-label="Open wijnmand">
@@ -46,14 +46,14 @@
         <div class="hero-image" role="img" aria-label="Een sfeervolle wijnkelder met zorgvuldig bewaarde flessen"></div>
         <div class="hero-shade"></div>
         <div class="hero-content">
-          <h1 id="heroTitle"><span>De Wijnkast</span><em>Liefde in het glas.</em></h1>
+          <h1 id="heroTitle"><span data-site-setting="hero.title">De Wijnkast</span><em data-site-setting="hero.tagline">Liefde in het glas.</em></h1>
           <div class="ornament" aria-hidden="true"><span></span><i></i><span></span></div>
-          <p>
+          <p data-site-setting="hero.body">
             Persoonlijk geselecteerde wijnen uit mijn eigen kast.<br />
             Soms één fles, soms een klein rijtje.<br />
             Wat je hier ziet is direct beschikbaar.
           </p>
-          <a class="outline-button" href="#collectie">Bekijk de wijnen <span aria-hidden="true">→</span></a>
+          <a class="outline-button" href="#collectie"><span data-site-setting="hero.cta">Bekijk de wijnen</span> <span class="button-arrow" aria-hidden="true">→</span></a>
         </div>
       </section>
 
@@ -61,14 +61,14 @@
         <div class="collection-inner">
           <div class="collection-heading">
             <div class="section-title">
-              <p class="eyebrow">Persoonlijk geselecteerd</p>
-              <h2 id="collectionTitle">De laatste flessen uit mijn kast</h2>
+              <p class="eyebrow" data-site-setting="collection.eyebrow">Persoonlijk geselecteerd</p>
+              <h2 id="collectionTitle" data-site-setting="collection.title">De laatste flessen uit mijn kast</h2>
               <div class="ornament compact" aria-hidden="true"><span></span><i></i><span></span></div>
-              <p>Iedere fles in deze selectie heb ik zelf uitgekozen.<br />Vaak zijn het de laatste flessen uit een import of privécollectie.</p>
+              <p data-site-setting="collection.body">Iedere fles in deze selectie heb ik zelf uitgekozen.<br />Vaak zijn het de laatste flessen uit een import of privécollectie.</p>
             </div>
 
             <details class="collection-options" id="collectionOptions">
-              <summary>Bekijk alles <span aria-hidden="true">→</span></summary>
+              <summary><span data-site-setting="collection.options">Bekijk alles</span> <span class="button-arrow" aria-hidden="true">→</span></summary>
               <div class="options-panel">
                 <div class="filters" id="filters" role="group" aria-label="Filter op soort wijn"></div>
                 <label class="sort-control" id="sortControl">
@@ -87,8 +87,8 @@
           <div class="product-grid" id="productGrid" aria-live="polite"></div>
           <div class="empty-state" id="emptyState" hidden>
             <div class="empty-mark" aria-hidden="true">T</div>
-            <span>De wijnkast wordt gevuld.</span>
-            <p>Binnenkort vind je hier de eerste persoonlijk geselecteerde flessen.</p>
+            <span data-site-setting="empty.title">De wijnkast wordt gevuld.</span>
+            <p data-site-setting="empty.body">Binnenkort vind je hier de eerste persoonlijk geselecteerde flessen.</p>
           </div>
 
           <div class="selection-dots" id="selectionDots" aria-hidden="true">
@@ -98,23 +98,23 @@
           <div class="benefit-strip" aria-label="Waarom De Wijnkast">
             <article>
               <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M12 3h8v7l3 4v14H9V14l3-4V3Zm0 12h11M14 6h4" /></svg>
-              <h3>Exclusief</h3>
-              <p>Kleine oplages en<br />unieke wijnen.</p>
+              <h3 data-site-setting="benefit.exclusive.title">Exclusief</h3>
+              <p data-site-setting="benefit.exclusive.body">Kleine oplages en<br />unieke wijnen.</p>
             </article>
             <article>
               <svg viewBox="0 0 32 32" aria-hidden="true"><path d="m16 3 11 4v8c0 7-4.5 11.5-11 14-6.5-2.5-11-7-11-14V7l11-4Zm-5 13 3 3 7-8" /></svg>
-              <h3>Direct beschikbaar</h3>
-              <p>Geen wachttijd.<br />Wat je ziet is leverbaar.</p>
+              <h3 data-site-setting="benefit.available.title">Direct beschikbaar</h3>
+              <p data-site-setting="benefit.available.body">Geen wachttijd.<br />Wat je ziet is leverbaar.</p>
             </article>
             <article>
               <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 27S4 20 4 11a6 6 0 0 1 11-3.3A6 6 0 0 1 28 11c0 9-12 16-12 16Z" /></svg>
-              <h3>Met zorg gekozen</h3>
-              <p>Voor echte<br />liefhebbers.</p>
+              <h3 data-site-setting="benefit.care.title">Met zorg gekozen</h3>
+              <p data-site-setting="benefit.care.body">Voor echte<br />liefhebbers.</p>
             </article>
             <article>
               <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M8 12h16l1 16H7l1-16Zm4 0V8a4 4 0 0 1 8 0v4M16 18v5" /></svg>
-              <h3>Persoonlijk &amp; eerlijk</h3>
-              <p>Uit mijn eigen kast,<br />recht uit het hart.</p>
+              <h3 data-site-setting="benefit.personal.title">Persoonlijk &amp; eerlijk</h3>
+              <p data-site-setting="benefit.personal.body">Uit mijn eigen kast,<br />recht uit het hart.</p>
             </article>
           </div>
         </div>
@@ -122,9 +122,9 @@
 
       <section class="about" id="over" aria-labelledby="aboutTitle">
         <div>
-          <p class="eyebrow">Taste of Life</p>
-          <h2 id="aboutTitle">Wijn met een verhaal.</h2>
-          <p>Geen anonieme voorraad, maar een kleine selectie die met aandacht is gekozen en persoonlijk wordt aangeboden.</p>
+          <p class="eyebrow" data-site-setting="about.eyebrow">Taste of Life</p>
+          <h2 id="aboutTitle" data-site-setting="about.title">Wijn met een verhaal.</h2>
+          <p data-site-setting="about.body">Geen anonieme voorraad, maar een kleine selectie die met aandacht is gekozen en persoonlijk wordt aangeboden.</p>
         </div>
       </section>
     </main>
@@ -205,11 +205,11 @@
     <footer id="contact">
       <div class="footer-brand">
         <img src="assets/taste-of-life-logo.jpg" alt="Taste of Life" />
-        <div><p>De Wijnkast</p><small>Persoonlijk geselecteerd. Met liefde voor de fles.</small></div>
+        <div><p data-site-setting="footer.name">De Wijnkast van Taste of Life</p><small data-site-setting="footer.tagline">Persoonlijk geselecteerd. Met liefde voor de fles.</small></div>
       </div>
       <blockquote class="footer-verse">
-        <p lang="en">“Your word is a lamp for my feet,<br />a light on my path.”</p>
-        <cite>Psalm 119:105</cite>
+        <p lang="en" data-site-setting="footer.verse">“Your word is a lamp for my feet,<br />a light on my path.”</p>
+        <cite data-site-setting="footer.verse_reference">Psalm 119:105</cite>
       </blockquote>
     </footer>
 

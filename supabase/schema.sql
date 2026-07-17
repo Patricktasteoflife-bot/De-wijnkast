@@ -303,5 +303,6 @@ revoke all on function public.place_order(jsonb, jsonb) from public;
 grant execute on function public.is_wijnkast_admin() to authenticated;
 grant execute on function public.place_order(jsonb, jsonb) to anon, authenticated, service_role;
 
--- Maak na het aanmaken van jouw Supabase-account één beheerder aan:
--- insert into public.admins (user_id) values ('JOUW-AUTH-USER-UUID');
+-- Voer daarna supabase/migrations/20260717_beheeromgeving.sql uit.
+-- Die migratie koppelt uitsluitend het bevestigde eigenaarsadres automatisch
+-- en voegt de beveiligde beheerpagina-instellingen toe.

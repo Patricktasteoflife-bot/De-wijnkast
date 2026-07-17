@@ -1,4 +1,4 @@
-# De Wijnkast | Taste of Life
+# De Wijnkast van Taste of Life
 
 Een aparte, mobiele klantenapp voor losse en schaars beschikbare flessen. De app deelt alleen openbare wijngegevens en kan bestellingen plaatsen. Klanten krijgen geen toegang tot het Taste of Life-beheer, klantgegevens, facturen of andere orders.
 
@@ -17,6 +17,7 @@ Deze officiële versie bevat bewust geen voorbeeldvoorraad. Zolang de live voorr
 - De app bevestigt direct na de order; Resend draait daarna begrensd op de achtergrond
 - Afgeschermde order- en klantgegevens via Supabase Row Level Security
 - Koppellaag voor de bestaande beheerapp in `integration/admin-connector.js`
+- Eigen beveiligde beheerpagina voor wijnen, voorraad, prijzen, omschrijvingen en websiteteksten
 
 ## Nu bekijken
 
@@ -32,15 +33,17 @@ Open daarna `http://localhost:4173`. Zonder gekoppelde voorraad toont de offici�
 
 1. Maak een nieuw Supabase-project voor De Wijnkast.
 2. Voer `supabase/schema.sql` uit in de Supabase SQL Editor.
-3. Maak in Supabase Authentication jouw eigen beheeraccount aan.
-4. Voeg jouw `auth.users.id` toe aan `public.admins` met de instructie onderaan `schema.sql`.
-5. Vul in `config.js` de Project URL en de publieke anon key in.
-6. Zet `demoMode` op `false`.
-7. Plaats de inhoud van deze map op Cloudflare Pages; de reserveringsroute staat in `functions/api/reserve.js`.
+3. Voer `supabase/migrations/20260717_beheeromgeving.sql` uit.
+4. Vul in `config.js` de Project URL en de publieke anon key in.
+5. Zet `demoMode` op `false`.
+6. Plaats de inhoud van deze map op Cloudflare Pages; de reserveringsroute staat in `functions/api/reserve.js`.
+7. Open `/beheer` en gebruik de e-maillink; het bevestigde eigenaarsaccount krijgt automatisch beheerrechten.
 
 ### Bestaand live project bijwerken
 
 Voer één keer `supabase/migrations/20260717_idempotent_reservations.sql` uit in de Supabase SQL Editor. Deze migratie houdt dezelfde RPC-naam aan en voegt alleen de unieke aanvraag-ID toe, zodat een retry dezelfde order teruggeeft zonder nogmaals voorraad te verminderen.
+
+Voer daarna één keer `supabase/migrations/20260717_beheeromgeving.sql` uit. Deze migratie wijzigt geen voorraad of orders. Ze voegt alleen de beveiligde beheerrechten, openbare websiteteksten en bescherming tegen gelijktijdige voorraadwijzigingen toe.
 
 De Cloudflare Pages productieomgeving gebruikt:
 
@@ -54,16 +57,21 @@ Een fout of timeout bij Resend maakt een reeds geslaagde reservering nooit onged
 
 De anon key mag in de klantenapp staan. De beveiliging zit in de database-regels: klanten kunnen alleen actieve producten met voorraad lezen en de beveiligde `place_order`-functie uitvoeren. Ze kunnen geen orders, klantgegevens of beheerfuncties uitlezen.
 
-## Koppeling met jouw beheerapp
+## Zelf beheren
 
-De beheerapp gebruikt `integration/admin-connector.js` met het tijdelijke toegangstoken van jouw ingelogde Supabase-account. Alleen een gebruiker die ook in `public.admins` staat, mag:
+Open na publicatie `/beheer`. De pagina stuurt een eenmalige inloglink naar `patrick.tasteoflife@hotmail.com`. Alleen dit door Supabase bevestigde e-mailadres krijgt beheerrechten; er staat geen service-role-key of gedeeld wachtwoord in de browser.
 
-- wijnen toevoegen of aanpassen;
-- voorraad handmatig wijzigen;
-- alle Wijnkast-bestellingen bekijken;
-- de status van een bestelling aanpassen.
+Stel in Supabase bij **Authentication → URL Configuration** de exacte redirect-URL `https://de-wijnkast-v2.pages.dev/beheer` in. Gebruik hiervoor geen brede `*.pages.dev`-wildcard: zo kan een preview of kopie van de openbare repository nooit de beheerlink ontvangen.
 
-De precieze knoppen kunnen aan jouw bestaande app worden toegevoegd zodra de actuele bronbestanden beschikbaar zijn. De klantapp blijft een losse website en bevat geen route of menu naar de beheerapp.
+Laat bij **Authentication → Providers → Email** de optie **Confirm Email** aanstaan. Na de eerste geslaagde beheerlogin kun je **Allow new users to sign up** uitzetten; bestaande magic-linklogins blijven dan werken. Beheerrechten blijven bovendien aan de concrete magic-linksessie gebonden, zodat een wachtwoordsessie nooit beheer krijgt.
+
+Daar kun je zonder GitHub:
+
+- wijnen toevoegen en alle catalogusvelden aanpassen;
+- voorraad, prijs, omschrijving en zichtbaarheid wijzigen;
+- alle zichtbare marketingteksten en de Psalmtekst aanpassen.
+
+De beheerpagina verwijdert geen wijnen: zet `Tonen in de app` uit om een wijn veilig te verbergen. Iedere wijziging heeft een expliciete opslaanknop. Als ondertussen een reservering de voorraad heeft veranderd, blokkeert het beheer de verouderde wijziging en vraagt het eerst opnieuw te laden.
 
 ## Belangrijk voor livegang
 

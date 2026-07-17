@@ -1,0 +1,15 @@
+/beheer
+  Cache-Control: no-store
+  Content-Security-Policy: default-src 'self'; connect-src 'self' https://qpdupdiuqllmfvgrkjpl.supabase.co; img-src 'self' https: data:; style-src 'self'; script-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'
+  Referrer-Policy: same-origin
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/beheer.html
+  Cache-Control: no-store
+  Content-Security-Policy: default-src 'self'; connect-src 'self' https://qpdupdiuqllmfvgrkjpl.supabase.co; img-src 'self' https: data:; style-src 'self'; script-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'
+  Referrer-Policy: same-origin
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  X-Robots-Tag: noindex, nofollow, noarchive

@@ -1,7 +1,7 @@
 {
-  "name": "De Wijnkast",
+  "name": "De Wijnkast van Taste of Life",
   "short_name": "De Wijnkast",
-  "description": "Sommige flessen wachten op de juiste tafel.",
+  "description": "Persoonlijk geselecteerde wijnen uit De Wijnkast van Taste of Life.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#080604",
