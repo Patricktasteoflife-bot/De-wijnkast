@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "nl.tasteoflife.dewijnkast",
+      "sha256_cert_fingerprints": [
+        "C1:10:AD:B2:27:77:16:28:60:D3:AE:D6:9B:09:5B:59:0C:AF:D5:2A:DC:86:2E:B5:A5:1A:8C:DB:D7:3F:F7:5F"
+      ]
+    }
+  }
+]
