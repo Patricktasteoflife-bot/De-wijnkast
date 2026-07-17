@@ -34,8 +34,8 @@ export async function onRequestPost({ request, env }) {
 
   const baseUrl = String(env.SUPABASE_URL).replace(/\/$/, "");
   const headers = {
-    apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-    Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+    apikey: request.headers.get("apikey") || env.SUPABASE_SERVICE_ROLE_KEY,
+    Authorization: request.headers.get("Authorization") || `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
     "Content-Type": "application/json"
   };
 
