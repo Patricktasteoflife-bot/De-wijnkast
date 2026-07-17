@@ -463,7 +463,7 @@
       phone: String(formData.get("phone") || "").trim(),
       email: String(formData.get("email") || "").trim(),
       delivery: String(formData.get("delivery") || "pickup"),
-      notes: [...businessDetails, customerNote].filter(Boolean).join("\\n")
+      notes: [...businessDetails, customerNote].filter(Boolean).join("\n")
     };
     if (!customer.name || !customer.phone || !formData.get("adult")) {
       els.formStatus.textContent = "Vul de verplichte gegevens in.";
