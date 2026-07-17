@@ -400,7 +400,7 @@
   }
 
   async function createLiveOrder(customer) {
-    const response = await fetch(`${trimSlash(config.supabaseUrl)}/rest/v1/rpc/place_order`, {
+    const response = await fetch("/api/reserve", {
       method: "POST",
       headers: { ...apiHeaders(), "Content-Type": "application/json" },
       body: JSON.stringify({
