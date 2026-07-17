@@ -7,6 +7,8 @@
   const backendConfigured = Boolean(config.supabaseUrl && config.supabaseAnonKey);
   const CART_KEY = "tol-wijnkast-cart-v1";
   const CUSTOMER_KEY = "tol-wijnkast-customer-v1";
+  const PENDING_ORDER_KEY = "tol-wijnkast-pending-order-v1";
+  const PENDING_RECONCILE_TTL = 5 * 60 * 1000;
   const previewProducts = Array.isArray(window.WIJNKAST_PRODUCTS) ? window.WIJNKAST_PRODUCTS : [];
 
   const state = {
@@ -14,7 +16,8 @@
     cart: readStorage(CART_KEY, {}),
     filter: "Alles",
     sort: "price-asc",
-    busy: false
+    busy: false,
+    reconciling: false
   };
 
   const els = {
@@ -59,9 +62,15 @@
   async function init() {
     bindEvents();
     prefillCustomer();
+    const pendingOrder = applyPendingOrderGuard();
     await loadProducts();
     renderAll();
     registerServiceWorker();
+    if (pendingOrder?.status === "confirmed" && pendingOrder.result?.order_number) {
+      finishConfirmedOrder(pendingOrder.customer, pendingOrder.result, false, pendingOrder.request_id);
+    } else if (pendingOrder) {
+      void reconcilePendingOrder(pendingOrder, 500);
+    }
   }
 
   function bindEvents() {
@@ -102,15 +111,20 @@
       state.products = [];
       return;
     }
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), 8000);
     try {
       const response = await fetch(`${trimSlash(config.supabaseUrl)}/rest/v1/public_products?select=*&order=created_at.desc`, {
-        headers: apiHeaders()
+        headers: apiHeaders(),
+        signal: controller.signal
       });
       if (!response.ok) throw new Error("De wijnkast kon niet worden geladen.");
       state.products = (await response.json()).map(normalizeProduct);
     } catch (error) {
       state.products = [];
       showToast(error.message);
+    } finally {
+      window.clearTimeout(timer);
     }
   }
 
@@ -245,6 +259,10 @@
   }
 
   function addToCart(productId) {
+    if (state.busy) {
+      showToast("Wacht tot de huidige reservering is gecontroleerd.");
+      return;
+    }
     const product = state.products.find((item) => item.id === productId);
     if (!product) return;
     const current = Number(state.cart[productId] || 0);
@@ -260,6 +278,10 @@
   }
 
   function setCartQty(productId, quantity) {
+    if (state.busy) {
+      showToast("Wacht tot de huidige reservering is gecontroleerd.");
+      return;
+    }
     const product = state.products.find((item) => item.id === productId);
     if (!product) return;
     const next = Math.max(0, Math.min(product.stock, quantity));
@@ -341,7 +363,7 @@
   function openCheckout() {
     if (!cartItems().length) return;
     closeCart();
-    els.formStatus.textContent = "";
+    if (!state.busy) els.formStatus.textContent = "";
     els.checkoutDialog.showModal();
   }
 
@@ -370,47 +392,263 @@
       els.formStatus.textContent = "Vul de verplichte gegevens in.";
       return;
     }
+    const existingPending = readStorage(PENDING_ORDER_KEY, null);
+    if (!demoMode && isPendingOrder(existingPending)) {
+      state.busy = true;
+      els.placeOrderButton.disabled = true;
+      els.placeOrderButton.textContent = "Reservering wordt gecontroleerd";
+      els.formStatus.textContent = "Een eerdere reservering wordt eerst veilig gecontroleerd.";
+      if (pendingCanReconcile(existingPending)) void reconcilePendingOrder(existingPending);
+      return;
+    }
     state.busy = true;
     els.placeOrderButton.disabled = true;
     els.placeOrderButton.textContent = "Even reserveren…";
     els.formStatus.textContent = "";
-
-    try {
-      if (!backendConfigured && !demoMode) throw new Error("De wijnkast wordt nog met de live voorraad verbonden.");
-      const result = demoMode ? await createDemoOrder(customer) : await createLiveOrder(customer);
-      localStorage.setItem(CUSTOMER_KEY, JSON.stringify({ name: customer.name, phone: customer.phone, email: customer.email }));
-      state.cart = {};
-      persistCart();
-      if (!demoMode) await loadProducts();
-      renderAll();
-      els.checkoutDialog.close();
-      els.successMessage.textContent = `${demoMode ? "Testreservering" : "Reservering"} ${result.order_number} is vastgelegd. We nemen persoonlijk contact met je op over ophalen of verzenden.`;
-      els.successDialog.showModal();
-      els.checkoutForm.reset();
-      prefillCustomer();
-    } catch (error) {
-      els.formStatus.textContent = friendlyOrderError(error);
-      if (!demoMode) await loadProducts();
-      renderAll();
-    } finally {
+    const requestId = createRequestId();
+    const orderItems = cartItems().map(({ product, quantity }) => ({
+      product_id: product.id,
+      product_name: product.name,
+      quantity
+    }));
+    const pendingOrder = {
+      request_id: requestId,
+      created_at: Date.now(),
+      customer,
+      items: orderItems
+    };
+    if (!demoMode && !savePendingOrder(pendingOrder)) {
       state.busy = false;
       els.placeOrderButton.disabled = false;
       els.placeOrderButton.textContent = "Reservering plaatsen";
+      els.formStatus.textContent = "De veilige reserveringscontrole kon niet worden opgeslagen. Ververs de app en probeer daarna opnieuw.";
+      return;
+    }
+
+    let result;
+    try {
+      if (!backendConfigured && !demoMode) throw new Error("De wijnkast wordt nog met de live voorraad verbonden.");
+      result = demoMode
+        ? await createDemoOrder(customer)
+        : await createLiveOrder(customer, requestId, orderItems);
+    } catch (error) {
+      if (error.orderStatusUnknown) {
+        els.formStatus.textContent = "De reservering wordt gecontroleerd. Klik niet opnieuw; neem bij twijfel contact op met Taste of Life.";
+        els.placeOrderButton.textContent = "Reservering wordt gecontroleerd";
+        if (!demoMode) window.setTimeout(() => void reconcilePendingOrder(pendingOrder), 1200);
+      } else {
+        clearPendingOrder(requestId);
+        state.busy = false;
+        els.placeOrderButton.disabled = false;
+        els.placeOrderButton.textContent = "Reservering plaatsen";
+        els.formStatus.textContent = friendlyOrderError(error);
+        if (!demoMode) await loadProducts();
+        renderAll();
+      }
+      return;
+    }
+
+    markPendingConfirmed(requestId, result);
+    finishConfirmedOrder(customer, result, demoMode, requestId);
+  }
+
+  async function createLiveOrder(customer, requestId, orderItems) {
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), 15000);
+    let response;
+    let body;
+    try {
+      response = await fetch("/api/reserve", {
+        method: "POST",
+        headers: { ...apiHeaders(), "Content-Type": "application/json" },
+        signal: controller.signal,
+        body: JSON.stringify({
+          request_id: requestId,
+          customer,
+          items: orderItems
+        })
+      });
+      body = await response.json().catch(() => ({}));
+    } catch {
+      const error = new Error("De verbinding viel weg tijdens het reserveren.");
+      error.orderStatusUnknown = true;
+      throw error;
+    } finally {
+      window.clearTimeout(timer);
+    }
+    if (!response.ok) {
+      const error = new Error(body.message || body.error || "Reserveren is niet gelukt.");
+      error.orderStatusUnknown = response.status >= 500 && body.code !== "NOT_CONFIGURED";
+      throw error;
+    }
+    const result = Array.isArray(body) ? body[0] : body;
+    if (!result?.order_number) {
+      const error = new Error("De reservering is ontvangen, maar de bevestiging ontbreekt.");
+      error.orderStatusUnknown = true;
+      throw error;
+    }
+    return result;
+  }
+
+  function applyPendingOrderGuard() {
+    const pending = readStorage(PENDING_ORDER_KEY, null);
+    if (!pending) return;
+    if (!isPendingOrder(pending)) {
+      clearPendingOrder();
+      return;
+    }
+    state.busy = true;
+    els.placeOrderButton.disabled = true;
+    els.placeOrderButton.textContent = "Reservering wordt gecontroleerd";
+    if (pending.status === "confirmed" && pending.result?.order_number) {
+      els.formStatus.textContent = `Reservering ${pending.result.order_number} is al bevestigd.`;
+      return pending;
+    }
+    if (!pendingCanReconcile(pending)) {
+      els.formStatus.textContent = "Deze eerdere reservering wordt niet automatisch opnieuw verstuurd. Neem contact op met Taste of Life voor controle.";
+      showToast("Een eerdere reservering moet handmatig worden gecontroleerd.");
+      return;
+    }
+    els.formStatus.textContent = "Een eerdere reservering wordt nog gecontroleerd. Klik niet opnieuw.";
+    showToast("Een eerdere reservering wordt veilig gecontroleerd.");
+    return pending;
+  }
+
+  function isPendingOrder(pending) {
+    return Boolean(
+      pending?.request_id
+      && pending.customer
+      && Array.isArray(pending.items)
+      && pending.items.length
+    );
+  }
+
+  function pendingCanReconcile(pending) {
+    const age = Date.now() - Number(pending?.created_at || 0);
+    return age >= 0 && age <= PENDING_RECONCILE_TTL;
+  }
+
+  function savePendingOrder(pending) {
+    try {
+      localStorage.setItem(PENDING_ORDER_KEY, JSON.stringify(pending));
+      return true;
+    } catch {
+      return false;
     }
   }
 
-  async function createLiveOrder(customer) {
-    const response = await fetch("/api/reserve", {
-      method: "POST",
-      headers: { ...apiHeaders(), "Content-Type": "application/json" },
-      body: JSON.stringify({
-        customer,
-        items: cartItems().map(({ product, quantity }) => ({ product_id: product.id, quantity }))
-      })
-    });
-    const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(body.message || body.error || "Reserveren is niet gelukt.");
-    return Array.isArray(body) ? body[0] : body;
+  function clearPendingOrder(requestId) {
+    try {
+      const current = readStorage(PENDING_ORDER_KEY, null);
+      if (!current || !requestId || current.request_id === requestId) {
+        localStorage.removeItem(PENDING_ORDER_KEY);
+      }
+    } catch {
+      // De database-idempotentie blijft leidend als browseropslag niet beschikbaar is.
+    }
+  }
+
+  function markPendingConfirmed(requestId, result) {
+    const current = readStorage(PENDING_ORDER_KEY, null);
+    if (!current || current.request_id !== requestId) return;
+    savePendingOrder({ ...current, status: "confirmed", result });
+  }
+
+  function createRequestId() {
+    if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+    return `wk-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  }
+
+  async function refreshProductsAfterOrder() {
+    await loadProducts();
+    renderAll();
+  }
+
+  async function reconcilePendingOrder(pendingOrder, delay = 0) {
+    if (demoMode || state.reconciling || !pendingOrder) return;
+    if (!pendingCanReconcile(pendingOrder)) {
+      state.busy = true;
+      els.placeOrderButton.disabled = true;
+      els.placeOrderButton.textContent = "Handmatige controle nodig";
+      els.formStatus.textContent = "Deze reservering wordt niet automatisch opnieuw verstuurd. Neem contact op met Taste of Life voor controle.";
+      return;
+    }
+    state.reconciling = true;
+    if (delay) await new Promise((resolve) => window.setTimeout(resolve, delay));
+    if (!pendingCanReconcile(pendingOrder)) {
+      state.reconciling = false;
+      state.busy = true;
+      els.placeOrderButton.disabled = true;
+      els.placeOrderButton.textContent = "Handmatige controle nodig";
+      els.formStatus.textContent = "Deze reservering wordt niet automatisch opnieuw verstuurd. Neem contact op met Taste of Life voor controle.";
+      return;
+    }
+    let result;
+    try {
+      result = await createLiveOrder(
+        pendingOrder.customer,
+        pendingOrder.request_id,
+        pendingOrder.items
+      );
+    } catch (error) {
+      if (error.orderStatusUnknown) {
+        state.busy = true;
+        els.placeOrderButton.disabled = true;
+        els.placeOrderButton.textContent = "Reservering wordt gecontroleerd";
+        els.formStatus.textContent = "De reservering kon nog niet worden bevestigd. Klik niet opnieuw; neem contact op met Taste of Life.";
+      } else {
+        clearPendingOrder(pendingOrder.request_id);
+        state.busy = false;
+        els.placeOrderButton.disabled = false;
+        els.placeOrderButton.textContent = "Reservering plaatsen";
+        els.formStatus.textContent = friendlyOrderError(error);
+        await loadProducts();
+        renderAll();
+      }
+      state.reconciling = false;
+      return;
+    }
+    state.reconciling = false;
+    markPendingConfirmed(pendingOrder.request_id, result);
+    finishConfirmedOrder(pendingOrder.customer, result, false, pendingOrder.request_id);
+  }
+
+  function finishConfirmedOrder(customer, result, isDemo, requestId) {
+    try {
+      completeOrder(customer, result, isDemo, requestId);
+    } catch (error) {
+      console.error("Bevestigde reservering kon niet volledig worden getoond", error);
+      state.busy = true;
+      els.placeOrderButton.disabled = true;
+      els.placeOrderButton.textContent = "Reservering vastgelegd";
+      els.formStatus.textContent = `Reservering ${result.order_number} is vastgelegd. Ververs de app als de bevestiging niet opent.`;
+    }
+  }
+
+  function completeOrder(customer, result, isDemo, requestId) {
+    try {
+      localStorage.setItem(CUSTOMER_KEY, JSON.stringify({
+        name: customer.name,
+        phone: customer.phone,
+        email: customer.email
+      }));
+    } catch {
+      // Het onthouden van klantgegevens is optioneel en mag bevestiging niet blokkeren.
+    }
+    state.cart = {};
+    state.busy = false;
+    try { persistCart(); } catch { /* De order zelf is al bevestigd. */ }
+    renderAll();
+    if (els.checkoutDialog.open) els.checkoutDialog.close();
+    els.placeOrderButton.disabled = false;
+    els.placeOrderButton.textContent = "Reservering plaatsen";
+    els.formStatus.textContent = "";
+    els.successMessage.textContent = `${isDemo ? "Testreservering" : "Reservering"} ${result.order_number} is vastgelegd. We nemen persoonlijk contact met je op over ophalen of verzenden.`;
+    if (!els.successDialog.open) els.successDialog.showModal();
+    els.checkoutForm.reset();
+    prefillCustomer();
+    if (!isDemo) void refreshProductsAfterOrder();
+    clearPendingOrder(requestId);
   }
 
   async function createDemoOrder(customer) {

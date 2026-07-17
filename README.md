@@ -13,6 +13,8 @@ Deze officiële versie bevat bewust geen voorbeeldvoorraad. Zolang de live voorr
 - Ophalen, verzenden en een opmerking bij de bestelling
 - PWA: als app op telefoon te installeren
 - Veilige, atomaire voorraadvermindering: twee klanten kunnen niet dezelfde laatste fles bestellen
+- Eén aanvraag-ID per reservering: een herhaalde aanvraag boekt dezelfde voorraad niet opnieuw af
+- De app bevestigt direct na de order; Resend draait daarna begrensd op de achtergrond
 - Afgeschermde order- en klantgegevens via Supabase Row Level Security
 - Koppellaag voor de bestaande beheerapp in `integration/admin-connector.js`
 
@@ -34,7 +36,21 @@ Open daarna `http://localhost:4173`. Zonder gekoppelde voorraad toont de offici�
 4. Voeg jouw `auth.users.id` toe aan `public.admins` met de instructie onderaan `schema.sql`.
 5. Vul in `config.js` de Project URL en de publieke anon key in.
 6. Zet `demoMode` op `false`.
-7. Plaats de inhoud van deze map op Netlify.
+7. Plaats de inhoud van deze map op Cloudflare Pages; de reserveringsroute staat in `functions/api/reserve.js`.
+
+### Bestaand live project bijwerken
+
+Voer één keer `supabase/migrations/20260717_idempotent_reservations.sql` uit in de Supabase SQL Editor. Deze migratie houdt dezelfde RPC-naam aan en voegt alleen de unieke aanvraag-ID toe, zodat een retry dezelfde order teruggeeft zonder nogmaals voorraad te verminderen.
+
+De Cloudflare Pages productieomgeving gebruikt:
+
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY` (secret)
+- `RESEND_API_KEY` (secret)
+- `NOTIFICATION_EMAIL`
+- optioneel `RESEND_FROM` voor een geverifieerd afzenderdomein
+
+Een fout of timeout bij Resend maakt een reeds geslaagde reservering nooit ongedaan en houdt het klantenscherm niet meer vast.
 
 De anon key mag in de klantenapp staan. De beveiliging zit in de database-regels: klanten kunnen alleen actieve producten met voorraad lezen en de beveiligde `place_order`-functie uitvoeren. Ze kunnen geen orders, klantgegevens of beheerfuncties uitlezen.
 
@@ -54,5 +70,5 @@ De precieze knoppen kunnen aan jouw bestaande app worden toegevoegd zodra de act
 - Vervang de demonstratievoorraad door echte voorraad.
 - Voeg echte wijnfoto-URL's toe via `image_url`.
 - Controleer contact-, verzend-, privacy- en leeftijdsinformatie.
-- Test een bestelling met precies één beschikbare fles vanaf twee telefoons.
+- Controleer de reserveringsflow eerst met de geautomatiseerde mocktests; gebruik geen live voorraad als technische test.
 - Voeg eventueel later Mollie/iDEAL toe; de huidige versie registreert een bestelling en reserveert de voorraad meteen.
