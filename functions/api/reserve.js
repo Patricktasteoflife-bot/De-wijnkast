@@ -76,7 +76,7 @@ async function sendReservationEmail({ env, customer, items, result, requestId })
       signal: controller.signal,
       body: JSON.stringify({
         from: env.RESEND_FROM || "De Wijnkast <onboarding@resend.dev>",
-        to: [env.NOTIFICATION_EMAIL],
+        to: [String(env.NOTIFICATION_EMAIL).trim().toLowerCase()],
         subject: `Nieuwe reservering ${result?.order_number || ""}`,
         text
       })

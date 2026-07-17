@@ -26,12 +26,12 @@ export async function onRequestPost({ request, env }) {
         Authorization: `Bearer ${env.RESEND_API_KEY}`,
         "Content-Type": "application/json",
         "User-Agent": "De-Wijnkast/2.0",
-        "Idempotency-Key": "deployment-email-check/b31d8d9"
+        "Idempotency-Key": "deployment-email-check/71303ca-lowercase"
       },
       signal: controller.signal,
       body: JSON.stringify({
         from: env.RESEND_FROM || "De Wijnkast <onboarding@resend.dev>",
-        to: [env.NOTIFICATION_EMAIL],
+        to: [String(env.NOTIFICATION_EMAIL).trim().toLowerCase()],
         subject: "De Wijnkast e-mailcontrole — geen reservering",
         text: "Dit is uitsluitend een technische e-mailcontrole. Er is geen bestelling geplaatst en er is geen voorraad aangepast."
       })

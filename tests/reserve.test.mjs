@@ -26,7 +26,7 @@ const env = {
   SUPABASE_URL: "https://example.supabase.co",
   SUPABASE_SERVICE_ROLE_KEY: "server-key",
   RESEND_API_KEY: "resend-key",
-  NOTIFICATION_EMAIL: "owner@example.com"
+  NOTIFICATION_EMAIL: "Owner@Example.com"
 };
 
 function requestFor(body = payload) {
@@ -81,7 +81,9 @@ test("antwoordt direct terwijl de e-mailtaak nog loopt", async (t) => {
 
   const resendCall = calls[1];
   assert.equal(resendCall.options.headers["Idempotency-Key"], "reservation/WK-TEST-1");
-  assert.match(JSON.parse(resendCall.options.body).text, /1 × Santenay/);
+  const resendBody = JSON.parse(resendCall.options.body);
+  assert.deepEqual(resendBody.to, ["owner@example.com"]);
+  assert.match(resendBody.text, /1 × Santenay/);
 
   resolveEmail(new Response(JSON.stringify({ id: "mail-1" }), { status: 200 }));
   await backgroundTask;
