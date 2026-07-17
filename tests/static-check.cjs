@@ -23,6 +23,7 @@ const requiredFiles = [
   "supabase/schema.sql",
   "supabase/migrations/20260717_idempotent_reservations.sql",
   "supabase/migrations/20260717_beheeromgeving.sql",
+  "supabase/migrations/20260717_beheer_productrechten.sql",
   "integration/admin-connector.js",
   "beheer.html",
   "beheer.css",
@@ -62,6 +63,7 @@ if (!schema.includes("order by product_id")) throw new Error("Vaste voorraad-loc
 const adminHtml = fs.readFileSync(path.join(root, "beheer.html"), "utf8");
 const adminApp = fs.readFileSync(path.join(root, "beheer.js"), "utf8");
 const adminMigration = fs.readFileSync(path.join(root, "supabase/migrations/20260717_beheeromgeving.sql"), "utf8");
+const productRightsMigration = fs.readFileSync(path.join(root, "supabase/migrations/20260717_beheer_productrechten.sql"), "utf8");
 const serviceWorker = fs.readFileSync(path.join(root, "sw.js"), "utf8");
 const headers = fs.readFileSync(path.join(root, "_headers"), "utf8");
 const missingAdminIds = [...adminApp.matchAll(/querySelector\("#([A-Za-z0-9_-]+)"\)/g)]
@@ -102,6 +104,27 @@ if (!adminMigration.includes("method->>'method' in ('magiclink', 'otp')") || !ad
 }
 if (!adminMigration.includes("products_set_updated_at") || !adminMigration.includes("site_settings_set_updated_at")) {
   throw new Error("Optimistische locks missen server-timestamps.");
+}
+for (const [name, sql] of [
+  ["beheeromgeving", adminMigration],
+  ["productrechten", productRightsMigration]
+]) {
+  if (!sql.includes('create policy "Beheerder leest alle producten"') ||
+      !sql.includes('create policy "Beheerder voegt producten toe"') ||
+      !sql.includes('create policy "Beheerder wijzigt producten"') ||
+      !sql.includes("using (public.is_wijnkast_admin())") ||
+      !sql.includes("grant insert (\n  sku, name, producer") ||
+      !sql.includes("grant update (\n  sku, name, producer") ||
+      !sql.includes("revoke all privileges on table public.products from public, anon, authenticated") ||
+      !sql.includes("grant select on public.products to anon, authenticated")) {
+    throw new Error(`Veilige productrechten ontbreken in ${name}.`);
+  }
+}
+if (/^\s*(?:insert\s+into|update|delete\s+from)\s+public[.](?:products|orders|order_items)\b/im.test(productRightsMigration)) {
+  throw new Error("De rechtenreparatie mag geen product- of ordergegevens wijzigen.");
+}
+if (/for\s+(?:all|delete)\b/i.test(productRightsMigration)) {
+  throw new Error("De rechtenreparatie mag geen verwijderpolicy voor producten maken.");
 }
 if (!serviceWorker.includes("url.origin !== self.location.origin") || !serviceWorker.includes('url.pathname === "/beheer"') || !serviceWorker.includes('url.pathname === "/beheer.html"')) {
   throw new Error("Service worker schermt beheer- en externe data niet af.");

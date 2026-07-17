@@ -294,7 +294,15 @@ revoke all on public.products from anon, authenticated;
 
 grant select on public.products to anon, authenticated;
 grant select on public.public_products to anon, authenticated;
-grant select, insert, update, delete on public.products to authenticated;
+grant select on public.products to authenticated;
+grant insert (
+  sku, name, producer, vintage, region, country, color, description,
+  image_url, price_cents, stock, active, sort_order
+) on public.products to authenticated;
+grant update (
+  sku, name, producer, vintage, region, country, color, description,
+  image_url, price_cents, stock, active, sort_order
+) on public.products to authenticated;
 grant select, insert, update, delete on public.orders to authenticated;
 grant select, insert, update, delete on public.order_items to authenticated;
 grant select on public.admins to authenticated;
@@ -306,3 +314,6 @@ grant execute on function public.place_order(jsonb, jsonb) to anon, authenticate
 -- Voer daarna supabase/migrations/20260717_beheeromgeving.sql uit.
 -- Die migratie koppelt uitsluitend het bevestigde eigenaarsadres automatisch
 -- en voegt de beveiligde beheerpagina-instellingen toe.
+-- Voer op een bestaand project tot slot ook
+-- supabase/migrations/20260717_beheer_productrechten.sql uit. Deze idempotente
+-- reparatie legt alleen productrechten vast en wijzigt geen productgegevens.
