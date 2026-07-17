@@ -16,9 +16,15 @@ const requiredFiles = [
   "config.js",
   "app.js",
   "manifest.webmanifest",
+  "privacy.html",
+  ".well-known/assetlinks.json",
   "sw.js",
   "functions/api/reserve.js",
   "assets/taste-of-life-logo.jpg",
+  "assets/icons/icon-192.png",
+  "assets/icons/icon-512.png",
+  "assets/icons/icon-maskable-512.png",
+  "assets/icons/apple-touch-icon.png",
   "assets/wijnkast-hero.png",
   "supabase/schema.sql",
   "supabase/migrations/20260717_idempotent_reservations.sql",
@@ -38,7 +44,13 @@ const requiredFiles = [
 const missingFiles = requiredFiles.filter((file) => !fs.existsSync(path.join(root, file)));
 if (missingFiles.length) throw new Error(`Ontbrekende bestanden: ${missingFiles.join(", ")}`);
 
-JSON.parse(fs.readFileSync(path.join(root, "manifest.webmanifest"), "utf8"));
+const manifest = JSON.parse(fs.readFileSync(path.join(root, "manifest.webmanifest"), "utf8"));
+if (manifest.id !== "/" || manifest.scope !== "/" || manifest.start_url !== "/") {
+  throw new Error("Het Play/PWA-bereik is niet vastgelegd.");
+}
+if (!manifest.icons.some((icon) => icon.sizes === "512x512" && icon.purpose === "maskable")) {
+  throw new Error("Maskable Play/PWA-icoon ontbreekt.");
+}
 
 if (html.includes("admin-connector.js")) throw new Error("De beheerconnector mag niet door de klantenapp worden geladen.");
 if (!app.includes("/api/reserve")) throw new Error("Beveiligde reserveringsroute ontbreekt.");
@@ -77,6 +89,9 @@ const adminMigration = fs.readFileSync(path.join(root, "supabase/migrations/2026
 const productRightsMigration = fs.readFileSync(path.join(root, "supabase/migrations/20260717_beheer_productrechten.sql"), "utf8");
 const serviceWorker = fs.readFileSync(path.join(root, "sw.js"), "utf8");
 const headers = fs.readFileSync(path.join(root, "_headers"), "utf8");
+const androidManifest = JSON.parse(fs.readFileSync(path.join(root, "android/twa-manifest.json"), "utf8"));
+const androidBuild = fs.readFileSync(path.join(root, "android/app/build.gradle"), "utf8");
+const assetLinks = JSON.parse(fs.readFileSync(path.join(root, ".well-known/assetlinks.json"), "utf8"));
 const missingAdminIds = [...adminApp.matchAll(/querySelector\("#([A-Za-z0-9_-]+)"\)/g)]
   .map((match) => match[1])
   .filter((id) => !adminHtml.includes(`id="${id}"`));
@@ -84,6 +99,18 @@ if (missingAdminIds.length) throw new Error(`Ontbrekende beheer-HTML-id's: ${mis
 
 if (!html.includes("De Wijnkast van Taste of Life") || !adminHtml.includes("De Wijnkast van Taste of Life")) {
   throw new Error("De nieuwe appnaam ontbreekt.");
+}
+if (!html.includes('href="/privacy.html"') || !fs.readFileSync(path.join(root, "privacy.html"), "utf8").includes("Privacyverklaring")) {
+  throw new Error("De openbare privacyverklaring ontbreekt.");
+}
+if (androidManifest.packageId !== "nl.tasteoflife.dewijnkast" || androidManifest.host !== "de-wijnkast-v2.pages.dev") {
+  throw new Error("De Android-identiteit wijkt af.");
+}
+if (assetLinks[0]?.target?.package_name !== androidManifest.packageId || !assetLinks[0]?.target?.sha256_cert_fingerprints?.length) {
+  throw new Error("Android App Links zijn niet aan de package-ID gekoppeld.");
+}
+if (!androidBuild.includes("compileSdkVersion 36") || !androidBuild.includes("targetSdkVersion 36") || !androidBuild.includes('buildToolsVersion "36.0.0"')) {
+  throw new Error("De Android-bouwdoelen staan niet op API 36.");
 }
 if (!app.includes("SITE_SETTING_RULES") || !app.includes("rows.forEach(applySiteSetting)")) {
   throw new Error("Veilige live appteksten ontbreken.");

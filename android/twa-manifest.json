@@ -1,0 +1,43 @@
+{
+  "packageId": "nl.tasteoflife.dewijnkast",
+  "host": "de-wijnkast-v2.pages.dev",
+  "name": "De Wijnkast van Taste of Life",
+  "launcherName": "De Wijnkast",
+  "display": "standalone",
+  "themeColor": "#080604",
+  "themeColorDark": "#080604",
+  "navigationColor": "#080604",
+  "navigationColorDark": "#080604",
+  "navigationDividerColor": "#080604",
+  "navigationDividerColorDark": "#080604",
+  "backgroundColor": "#080604",
+  "enableNotifications": false,
+  "startUrl": "/",
+  "iconUrl": "https://de-wijnkast-v2.pages.dev/assets/icons/icon-512.png",
+  "maskableIconUrl": "https://de-wijnkast-v2.pages.dev/assets/icons/icon-maskable-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "../play-signing/de-wijnkast-upload.jks",
+    "alias": "de-wijnkast-upload"
+  },
+  "appVersion": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://de-wijnkast-v2.pages.dev/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://de-wijnkast-v2.pages.dev/",
+  "minSdkVersion": 23,
+  "orientation": "portrait-primary",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "displayOverride": []
+}

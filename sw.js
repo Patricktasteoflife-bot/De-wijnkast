@@ -1,4 +1,4 @@
-const VERSION = "wijnkast-v6-0-beheer";
+const VERSION = "wijnkast-v6-1-play";
 const CACHE = `taste-of-life-${VERSION}`;
 const ASSETS = [
   "/",
@@ -8,7 +8,12 @@ const ASSETS = [
   "/catalogus.js",
   "/app.js",
   "/manifest.webmanifest",
+  "/privacy.html",
   "/assets/taste-of-life-logo.jpg",
+  "/assets/icons/icon-192.png",
+  "/assets/icons/icon-512.png",
+  "/assets/icons/icon-maskable-512.png",
+  "/assets/icons/apple-touch-icon.png",
   "/wijnkelder-hero-v2.jpg",
   "/caroline-morey-chambrees-2023.png",
   "/caroline-morey-santenay-2024.png",
