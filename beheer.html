@@ -59,7 +59,7 @@
           <div>
             <p class="eyebrow">Taste of Life</p>
             <h1>De Wijnkast beheren</h1>
-            <p>Wijzig hier zelf je wijnen en de zichtbare teksten van de website.</p>
+            <p>Beheer hier je reserveringen, wijnen en de zichtbare teksten van de website.</p>
           </div>
           <button class="quiet-button refresh-button" id="refreshButton" type="button">Opnieuw laden</button>
         </div>
@@ -67,10 +67,21 @@
         <nav class="admin-tabs" role="tablist" aria-label="Beheeronderdelen">
           <button
             class="tab-button active"
-            id="productsTab"
+            id="ordersTab"
             type="button"
             role="tab"
             aria-selected="true"
+            aria-controls="ordersPanel"
+            data-tab="orders"
+          >
+            Reserveringen
+          </button>
+          <button
+            class="tab-button"
+            id="productsTab"
+            type="button"
+            role="tab"
+            aria-selected="false"
             aria-controls="productsPanel"
             data-tab="products"
           >
@@ -89,7 +100,37 @@
           </button>
         </nav>
 
-        <section class="tab-panel" id="productsPanel" role="tabpanel" aria-labelledby="productsTab">
+        <section class="tab-panel" id="ordersPanel" role="tabpanel" aria-labelledby="ordersTab">
+          <div class="panel-toolbar order-toolbar">
+            <label class="search-field">
+              <span class="sr-only">Zoek een reservering</span>
+              <input id="orderSearch" type="search" placeholder="Zoek op nummer, naam, telefoon of wijn" autocomplete="off" />
+            </label>
+            <label class="status-filter">
+              <span class="sr-only">Filter op status</span>
+              <select id="orderStatusFilter">
+                <option value="open" selected>Open reserveringen</option>
+                <option value="all">Alle reserveringen</option>
+                <option value="new">Nieuw</option>
+                <option value="confirmed">Bevestigd</option>
+                <option value="ready">Klaar</option>
+                <option value="completed">Afgerond</option>
+                <option value="cancelled">Geannuleerd</option>
+              </select>
+            </label>
+          </div>
+          <div class="panel-status" id="ordersStatus" role="status"></div>
+          <div class="order-list" id="orderList"></div>
+          <div class="empty-panel" id="ordersEmpty" hidden>
+            <p>Geen reserveringen gevonden.</p>
+          </div>
+          <div class="migration-hint" id="ordersMigrationHint" hidden>
+            <strong>Reserveringenbeheer moet één keer worden geactiveerd.</strong>
+            <p>De winkel en voorraad blijven gewoon werken. Voer eerst de meegeleverde veilige database-update uit.</p>
+          </div>
+        </section>
+
+        <section class="tab-panel" id="productsPanel" role="tabpanel" aria-labelledby="productsTab" hidden>
           <div class="panel-toolbar">
             <label class="search-field">
               <span class="sr-only">Zoek een wijn</span>

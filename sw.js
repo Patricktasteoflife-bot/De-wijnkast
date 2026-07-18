@@ -1,4 +1,4 @@
-const VERSION = "wijnkast-v6-2-snel";
+const VERSION = "wijnkast-v6-3-afgerond";
 const CACHE = `taste-of-life-${VERSION}`;
 const ASSETS = [
   "/",
@@ -9,6 +9,7 @@ const ASSETS = [
   "/app.js",
   "/manifest.webmanifest",
   "/privacy.html",
+  "/leeftijdscontrole.html",
   "/assets/taste-of-life-logo.jpg",
   "/assets/share-wijnkast.jpg",
   "/assets/icons/icon-192.png",
@@ -28,6 +29,7 @@ const ASSETS = [
   "/les-horees-rose-bonheur-2023.webp"
 ];
 const STATIC_PATHS = new Set(ASSETS.map((path) => path === "/" ? "/index.html" : path));
+const PUBLIC_NAV_PATHS = new Set(["/", "/index.html", "/privacy.html", "/leeftijdscontrole.html"]);
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(ASSETS)));
@@ -57,8 +59,8 @@ self.addEventListener("fetch", (event) => {
   if (url.pathname === "/beheer" || url.pathname === "/beheer.html" || url.pathname.startsWith("/beheer/") || url.pathname.startsWith("/api/")) return;
 
   if (request.mode === "navigate") {
-    if (url.pathname !== "/" && url.pathname !== "/index.html") return;
-    event.respondWith(networkFirst(request, "/index.html"));
+    if (!PUBLIC_NAV_PATHS.has(url.pathname)) return;
+    event.respondWith(networkFirst(request, url.pathname === "/" ? "/index.html" : url.pathname));
     return;
   }
 

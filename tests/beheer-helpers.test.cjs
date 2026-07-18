@@ -9,7 +9,7 @@ let source = fs.readFileSync(sourcePath, "utf8");
 source = source.replace("  init();", "  // init uitgeschakeld voor zuivere helpertests");
 source = source.replace(
   /\}\)\(\);\s*$/,
-  "  window.__beheerHelpers = { parsePrice, parseInteger, normalizeImageUrl, normalizeSettingValue, cleanText };\n})();"
+  "  window.__beheerHelpers = { parsePrice, parseInteger, normalizeImageUrl, normalizeSettingValue, cleanText, normalizeWhatsAppPhone };\n})();"
 );
 
 const sandbox = {
@@ -53,4 +53,11 @@ test("afbeeldingen accepteren alleen lokale paden of https", () => {
 test("tekstnormalisatie bewaart regels maar verwijdert randspaties", () => {
   assert.equal(helpers.normalizeSettingValue("  Regel 1  \r\nRegel 2  "), "Regel 1\nRegel 2");
   assert.equal(helpers.cleanText("  Een   titel  ", 40), "Een titel");
+});
+
+test("Nederlandse mobiele nummers worden veilig geschikt gemaakt voor WhatsApp", () => {
+  assert.equal(helpers.normalizeWhatsAppPhone("06 12 34 56 78"), "31612345678");
+  assert.equal(helpers.normalizeWhatsAppPhone("0031 6 12 34 56 78"), "31612345678");
+  assert.equal(helpers.normalizeWhatsAppPhone("+31 6 12 34 56 78"), "31612345678");
+  assert.equal(helpers.normalizeWhatsAppPhone("123"), "");
 });

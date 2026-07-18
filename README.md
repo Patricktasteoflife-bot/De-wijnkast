@@ -15,9 +15,13 @@ Deze officiële versie bevat bewust geen voorbeeldvoorraad. Zolang de live voorr
 - Veilige, atomaire voorraadvermindering: twee klanten kunnen niet dezelfde laatste fles bestellen
 - Eén aanvraag-ID per reservering: een herhaalde aanvraag boekt dezelfde voorraad niet opnieuw af
 - De app bevestigt direct na de order; Resend draait daarna begrensd op de achtergrond
+- Klanten kunnen hun volledige bevestiging bewaren/delen en krijgen bij een geverifieerde afzender ook een eigen e-mail
+- Vanuit Beheer kun je iedere klant ook direct een ingevulde WhatsApp-bevestiging sturen
 - Afgeschermde order- en klantgegevens via Supabase Row Level Security
 - Koppellaag voor de bestaande beheerapp in `integration/admin-connector.js`
 - Eigen beveiligde beheerpagina voor wijnen, voorraad, prijzen, omschrijvingen en websiteteksten
+- Reserveringenoverzicht met veilige statussen en eenmalig voorraadherstel bij annuleren
+- Duidelijke 18+-controle bij reserveren en overdracht
 
 ## Nu bekijken
 
@@ -34,10 +38,11 @@ Open daarna `http://localhost:4173`. Zonder gekoppelde voorraad toont de offici�
 1. Maak een nieuw Supabase-project voor De Wijnkast.
 2. Voer `supabase/schema.sql` uit in de Supabase SQL Editor.
 3. Voer `supabase/migrations/20260717_beheeromgeving.sql` uit.
-4. Vul in `config.js` de Project URL en de publieke anon key in.
-5. Zet `demoMode` op `false`.
-6. Plaats de inhoud van deze map op Cloudflare Pages; de reserveringsroute staat in `functions/api/reserve.js`.
-7. Open `/beheer` en gebruik de e-maillink; het bevestigde eigenaarsaccount krijgt automatisch beheerrechten.
+4. Voer `supabase/migrations/20260718_reserveringenbeheer.sql` uit.
+5. Vul in `config.js` de Project URL en de publieke anon key in.
+6. Zet `demoMode` op `false`.
+7. Plaats de inhoud van deze map op Cloudflare Pages; de reserveringsroute staat in `functions/api/reserve.js`.
+8. Open `/beheer` en gebruik de e-maillink; het bevestigde eigenaarsaccount krijgt automatisch beheerrechten.
 
 ### Bestaand live project bijwerken
 
@@ -47,13 +52,15 @@ Heeft het bestaande project oudere ordertabellen, voer dan eerst `supabase/migra
 
 Voer daarna één keer `supabase/migrations/20260717_beheeromgeving.sql` uit. Deze migratie wijzigt geen voorraad of orders. Ze voegt alleen de beveiligde beheerrechten, openbare websiteteksten en bescherming tegen gelijktijdige voorraadwijzigingen toe. Voer bij een bestaand project vervolgens ook `supabase/migrations/20260717_beheer_productrechten.sql` uit om de minimaal benodigde lees-, toevoeg- en wijzigrechten voor producten opnieuw vast te leggen; dit script verandert zelf geen productgegevens.
 
+Voer tot slot één keer `supabase/migrations/20260718_reserveringenbeheer.sql` uit. Tijdens installatie wijzigt dit script geen bestaande order of voorraad. Daarna kan alleen de beveiligde beheerfunctie een status aanpassen. Annuleren boekt de gereserveerde flessen precies één keer terug en maakt de annulering definitief.
+
 De Cloudflare Pages productieomgeving gebruikt:
 
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY` (secret)
 - `RESEND_API_KEY` (secret)
 - `NOTIFICATION_EMAIL`
-- optioneel `RESEND_FROM` voor een geverifieerd afzenderdomein
+- `RESEND_FROM` met een geverifieerd afzenderdomein voor automatische klantbevestigingen
 
 Een fout of timeout bij Resend maakt een reeds geslaagde reservering nooit ongedaan en houdt het klantenscherm niet meer vast.
 
@@ -69,6 +76,7 @@ Laat bij **Authentication → Providers → Email** de optie **Confirm Email** a
 
 Daar kun je zonder GitHub:
 
+- nieuwe, bevestigde, klaargezette, afgeronde en geannuleerde reserveringen beheren;
 - wijnen toevoegen en alle catalogusvelden aanpassen;
 - voorraad, prijs, omschrijving en zichtbaarheid wijzigen;
 - alle zichtbare marketingteksten en de Psalmtekst aanpassen.
@@ -80,5 +88,6 @@ De beheerpagina verwijdert geen wijnen: zet `Tonen in de app` uit om een wijn ve
 - Vervang de demonstratievoorraad door echte voorraad.
 - Voeg echte wijnfoto-URL's toe via `image_url`.
 - Controleer contact-, verzend-, privacy- en leeftijdsinformatie.
+- Volg en onderhoud de werkwijze op `leeftijdscontrole.html`, inclusief de jaarlijkse controle.
 - Controleer de reserveringsflow eerst met de geautomatiseerde mocktests; gebruik geen live voorraad als technische test.
 - Voeg eventueel later Mollie/iDEAL toe; de huidige versie registreert een bestelling en reserveert de voorraad meteen.

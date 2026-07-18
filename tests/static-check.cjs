@@ -19,6 +19,7 @@ const requiredFiles = [
   "app.js",
   "manifest.webmanifest",
   "privacy.html",
+  "leeftijdscontrole.html",
   ".well-known/assetlinks.json",
   "sw.js",
   "functions/api/reserve.js",
@@ -44,6 +45,7 @@ const requiredFiles = [
   "supabase/migrations/20260717_order_schema_compatibility.sql",
   "supabase/migrations/20260717_beheeromgeving.sql",
   "supabase/migrations/20260717_beheer_productrechten.sql",
+  "supabase/migrations/20260718_reserveringenbeheer.sql",
   "integration/admin-connector.js",
   "beheer.html",
   "beheer.css",
@@ -100,6 +102,7 @@ const adminHtml = fs.readFileSync(path.join(root, "beheer.html"), "utf8");
 const adminApp = fs.readFileSync(path.join(root, "beheer.js"), "utf8");
 const adminMigration = fs.readFileSync(path.join(root, "supabase/migrations/20260717_beheeromgeving.sql"), "utf8");
 const productRightsMigration = fs.readFileSync(path.join(root, "supabase/migrations/20260717_beheer_productrechten.sql"), "utf8");
+const ordersAdminMigration = fs.readFileSync(path.join(root, "supabase/migrations/20260718_reserveringenbeheer.sql"), "utf8");
 const serviceWorker = fs.readFileSync(path.join(root, "sw.js"), "utf8");
 const headers = fs.readFileSync(path.join(root, "_headers"), "utf8");
 const androidManifest = JSON.parse(fs.readFileSync(path.join(root, "android/twa-manifest.json"), "utf8"));
@@ -139,6 +142,18 @@ if (!adminApp.includes("config.adminRedirectUrl") || !fs.readFileSync(path.join(
 }
 if (!adminApp.includes('rpc("is_wijnkast_admin")') || !adminApp.includes('rpc("claim_wijnkast_admin")') || adminApp.includes("service_role")) {
   throw new Error("Beheerautorisatie is onveilig of ontbreekt.");
+}
+if (!adminHtml.includes('id="ordersTab"') || !adminHtml.includes('id="ordersPanel"') || !adminApp.includes('rpc("update_wijnkast_order_status"')) {
+  throw new Error("Het reserveringenbeheer ontbreekt.");
+}
+if (!adminApp.includes("customerWhatsAppHref") || !adminApp.includes("Stuur klantbevestiging via WhatsApp")) {
+  throw new Error("De handmatige klantbevestiging via WhatsApp ontbreekt.");
+}
+if (!ordersAdminMigration.includes("for update") || !ordersAdminMigration.includes("current_order.status = 'cancelled'") || !ordersAdminMigration.includes("stock = stock + item_to_restore.quantity")) {
+  throw new Error("Annuleren herstelt voorraad niet aantoonbaar exact één keer.");
+}
+if (!ordersAdminMigration.includes("revoke insert, update, delete on public.orders") || !ordersAdminMigration.includes("grant execute on function public.update_wijnkast_order_status")) {
+  throw new Error("Orderstatussen kunnen buiten de beveiligde beheerfunctie worden gewijzigd.");
 }
 if (!adminApp.includes('.eq("updated_at", state.editingProduct.updated_at)') || !adminApp.includes('.eq("updated_at", setting.updated_at)')) {
   throw new Error("Bescherming tegen gelijktijdige beheerwijzigingen ontbreekt.");
@@ -184,7 +199,7 @@ if (serviceWorker.includes("cache.put(event.request")) throw new Error("Service 
 if (!serviceWorker.includes("WIJNKAST_SW_VERSION") || !adminApp.includes("ensureSafeServiceWorker")) {
   throw new Error("Een oude brede cache wordt niet vóór beheer bijgewerkt.");
 }
-if (!serviceWorker.includes('const VERSION = "wijnkast-v6-2-snel"') || !adminApp.includes("wijnkast-v6-2-snel")) {
+if (!serviceWorker.includes('const VERSION = "wijnkast-v6-3-afgerond"') || !adminApp.includes("wijnkast-v6-3-afgerond")) {
   throw new Error("De snelle klantenapp en beheeromgeving gebruiken niet dezelfde cacheversie.");
 }
 if (!headers.includes("/beheer\n") || !headers.includes("/beheer.html\n") || !headers.includes("Cache-Control: no-store")) {
@@ -206,6 +221,15 @@ if (!html.includes('id="footerWhatsApp"') || !html.includes('id="successWhatsApp
 }
 if (!html.includes('id="successSummary"') || !html.includes('id="copyOrderNumberButton"') || !app.includes("renderSuccessSummary")) {
   throw new Error("De nette reserveringsbevestiging ontbreekt.");
+}
+if (!html.includes('id="shareConfirmationButton"') || !app.includes("shareConfirmedOrder") || !reserve.includes("sendCustomerConfirmationEmail")) {
+  throw new Error("De klantbevestiging kan niet worden bewaard, gedeeld of gemaild.");
+}
+if (!html.includes('id="installAppButton"') || !html.includes('id="shareAppButton"') || !app.includes("beforeinstallprompt") || !app.includes("navigator.share")) {
+  throw new Error("Installeren of delen van de app ontbreekt.");
+}
+if (!html.includes("Zo werkt reserveren") || !html.includes("leeftijd opnieuw gecontroleerd") || !html.includes('/leeftijdscontrole.html')) {
+  throw new Error("De reserveringsuitleg of verplichte 18+-melding ontbreekt.");
 }
 
 const optimizedImages = [

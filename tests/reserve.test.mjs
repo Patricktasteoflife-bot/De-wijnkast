@@ -99,6 +99,50 @@ test("antwoordt direct terwijl de e-mailtaak nog loopt", async (t) => {
   assert.equal(calls.length, 2);
 });
 
+test("stuurt met een geverifieerde afzender ook een nette klantbevestiging", async (t) => {
+  const originalFetch = globalThis.fetch;
+  t.after(() => { globalThis.fetch = originalFetch; });
+
+  const calls = [];
+  globalThis.fetch = async (url, options = {}) => {
+    calls.push({ url: String(url), options });
+    if (String(url).includes("/rpc/place_order")) {
+      return new Response(JSON.stringify([{ order_number: "WK-TEST-KLANT", total_cents: 6250 }]), {
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+    return new Response(JSON.stringify({ id: `mail-${calls.length}` }), { status: 200 });
+  };
+
+  let backgroundTask;
+  const response = await onRequestPost({
+    request: requestFor(),
+    env: {
+      ...env,
+      RESEND_FROM: "De Wijnkast van Taste of Life <reserveringen@tasteoflife.nl>"
+    },
+    waitUntil(task) { backgroundTask = task; }
+  });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    order_number: "WK-TEST-KLANT",
+    total_cents: 6250,
+    customer_confirmation: "queued"
+  });
+  await backgroundTask;
+  assert.equal(calls.length, 3);
+  const customerCall = calls[2];
+  assert.equal(customerCall.options.headers["Idempotency-Key"], "reservation-confirmation/WK-TEST-KLANT");
+  const customerBody = JSON.parse(customerCall.options.body);
+  assert.deepEqual(customerBody.to, ["test@example.com"]);
+  assert.match(customerBody.subject, /WK-TEST-KLANT/);
+  assert.match(customerBody.html, /Je flessen zijn gereserveerd/);
+  assert.match(customerBody.html, /18\+/);
+  assert.match(customerBody.text, /1 × Santenay/);
+});
+
 test("ontbrekende Resend-config blokkeert de reservering niet", async (t) => {
   const originalFetch = globalThis.fetch;
   const originalWarn = console.warn;

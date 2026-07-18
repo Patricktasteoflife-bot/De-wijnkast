@@ -66,7 +66,9 @@
     filter: "Alles",
     sort: "price-asc",
     busy: false,
-    reconciling: false
+    reconciling: false,
+    installPrompt: null,
+    confirmation: null
   };
 
   const els = {
@@ -108,7 +110,10 @@
     successSummary: document.querySelector("#successSummary"),
     successWhatsApp: document.querySelector("#successWhatsApp"),
     copyOrderNumber: document.querySelector("#copyOrderNumberButton"),
+    shareConfirmation: document.querySelector("#shareConfirmationButton"),
     closeSuccess: document.querySelector("#closeSuccessButton"),
+    installApp: document.querySelector("#installAppButton"),
+    shareApp: document.querySelector("#shareAppButton"),
     footerWhatsApp: document.querySelector("#footerWhatsApp"),
     toast: document.querySelector("#toast")
   };
@@ -118,6 +123,7 @@
   async function init() {
     bindEvents();
     setupContactLinks();
+    setupAppActions();
     prefillCustomer();
     syncCheckoutFields();
     const pendingOrder = applyPendingOrderGuard();
@@ -198,7 +204,20 @@
     els.closeSuccess.addEventListener("click", () => els.successDialog.close());
     els.deliverySelect.addEventListener("change", syncCheckoutFields);
     els.copyOrderNumber.addEventListener("click", copyConfirmedOrderNumber);
+    els.shareConfirmation.addEventListener("click", shareConfirmedOrder);
+    els.installApp.addEventListener("click", installApp);
+    els.shareApp.addEventListener("click", shareApp);
     els.checkoutForm.addEventListener("submit", submitOrder);
+    window.addEventListener("beforeinstallprompt", (event) => {
+      event.preventDefault();
+      state.installPrompt = event;
+      els.installApp.hidden = false;
+    });
+    window.addEventListener("appinstalled", () => {
+      state.installPrompt = null;
+      els.installApp.hidden = true;
+      showToast("De Wijnkast staat op je beginscherm.");
+    });
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape" && els.drawer.classList.contains("open")) closeCart();
     });
@@ -387,6 +406,7 @@
     persistCart();
     renderProducts();
     renderCart();
+    animateCartAdd();
     showToast(`${product.name} staat in je wijnmand.`);
   }
 
@@ -774,7 +794,12 @@
     els.placeOrderButton.disabled = false;
     els.placeOrderButton.textContent = "Reservering plaatsen";
     els.formStatus.textContent = "";
-    els.successMessage.textContent = `${isDemo ? "De testreservering" : "Je reservering"} is vastgelegd. We nemen persoonlijk contact met je op over ophalen of verzenden.`;
+    const emailQueued = result?.customer_confirmation === "queued" && customer.email;
+    els.successMessage.textContent = isDemo
+      ? "De testreservering is vastgelegd."
+      : emailQueued
+        ? `Je reservering is vastgelegd. De bevestiging wordt ook naar ${customer.email} gestuurd.`
+        : "Je reservering is vastgelegd. Bewaar of deel het overzicht hieronder; we nemen persoonlijk contact met je op.";
     renderSuccessSummary(customer, result.order_number, confirmedItems, confirmedTotal);
     if (!els.successDialog.open) els.successDialog.showModal();
     els.checkoutForm.reset();
@@ -812,6 +837,23 @@
       ${itemRows ? `<ul>${itemRows}</ul>` : ""}`;
     els.copyOrderNumber.dataset.orderNumber = String(orderNumber || "");
     els.successWhatsApp.href = whatsappHref(`Hallo Patrick, ik heb een vraag over reservering ${orderNumber} bij De Wijnkast.`);
+    state.confirmation = {
+      title: `Reservering ${orderNumber} · De Wijnkast`,
+      text: [
+        "DE WIJNKAST VAN TASTE OF LIFE",
+        `Reservering: ${orderNumber}`,
+        `Naam: ${customer.name}`,
+        `Ontvangst: ${delivery}`,
+        "",
+        "Gereserveerde wijnen:",
+        ...items.map((item) => `${item.quantity} × ${item.name}`),
+        "",
+        Number.isFinite(totalCents) && totalCents > 0 ? `Totaal: ${formatMoney(totalCents)}` : "",
+        "",
+        "Bij ophalen of bezorgen vindt een 18+-controle met geldig ID plaats.",
+        "https://de-wijnkast-v2.pages.dev/"
+      ].filter((line, index, lines) => line || (index > 0 && lines[index - 1])).join("\n")
+    };
   }
 
   async function copyConfirmedOrderNumber() {
@@ -823,6 +865,77 @@
     } catch {
       showToast(`Reserveringsnummer: ${orderNumber}`);
     }
+  }
+
+  async function shareConfirmedOrder() {
+    if (!state.confirmation) return;
+    if (navigator.share) {
+      try {
+        await navigator.share(state.confirmation);
+        return;
+      } catch (error) {
+        if (error?.name === "AbortError") return;
+      }
+    }
+    if (await copyText(state.confirmation.text)) showToast("De volledige bevestiging is gekopieerd.");
+    else showToast("Delen is op dit apparaat niet beschikbaar.");
+  }
+
+  function setupAppActions() {
+    const installed = window.matchMedia?.("(display-mode: standalone)").matches || navigator.standalone === true;
+    els.installApp.hidden = installed;
+  }
+
+  async function installApp() {
+    if (state.installPrompt) {
+      const prompt = state.installPrompt;
+      state.installPrompt = null;
+      await prompt.prompt();
+      const choice = await prompt.userChoice.catch(() => null);
+      els.installApp.hidden = choice?.outcome === "accepted";
+      if (choice?.outcome !== "accepted") showToast("Installeren is geannuleerd.");
+      return;
+    }
+    const appleMobile = /iphone|ipad|ipod/i.test(navigator.userAgent || "");
+    showToast(appleMobile
+      ? "Tik onderin op Deel en daarna op ‘Zet op beginscherm’."
+      : "Open het browsermenu en kies ‘App installeren’ of ‘Toevoegen aan startscherm’."
+    );
+  }
+
+  async function shareApp() {
+    const shareData = {
+      title: "De Wijnkast van Taste of Life",
+      text: "Bekijk de persoonlijk geselecteerde wijnen in De Wijnkast van Taste of Life.",
+      url: "https://de-wijnkast-v2.pages.dev/"
+    };
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch (error) {
+        if (error?.name === "AbortError") return;
+      }
+    }
+    if (await copyText(shareData.url)) showToast("De link naar De Wijnkast is gekopieerd.");
+    else showToast("Delen is op dit apparaat niet beschikbaar.");
+  }
+
+  async function copyText(value) {
+    try {
+      await navigator.clipboard.writeText(String(value || ""));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function animateCartAdd() {
+    if (els.floatingCart.hidden) return;
+    els.floatingCart.classList.remove("cart-bump");
+    void els.floatingCart.offsetWidth;
+    els.floatingCart.classList.add("cart-bump");
+    window.setTimeout(() => els.floatingCart.classList.remove("cart-bump"), 380);
   }
 
   function setupContactLinks() {

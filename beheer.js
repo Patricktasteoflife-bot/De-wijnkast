@@ -2,7 +2,7 @@
   "use strict";
 
   const OWNER_EMAIL = "patrick.tasteoflife@hotmail.com";
-  const SAFE_SW_VERSION = "wijnkast-v6-2-snel";
+  const SAFE_SW_VERSION = "wijnkast-v6-3-afgerond";
   const SW_RELOAD_KEY = "tol-wijnkast-admin-sw-reload";
   const PRODUCT_SELECT = [
     "id", "sku", "name", "producer", "vintage", "region", "country", "color",
@@ -10,6 +10,11 @@
     "created_at", "updated_at"
   ].join(",");
   const SETTING_SELECT = "key,section,label,value,input_kind,max_length,sort_order,updated_at";
+  const ORDER_SELECT = [
+    "id", "order_number", "customer_name", "phone", "email", "delivery_method",
+    "notes", "status", "total_cents", "created_at", "updated_at",
+    "order_items(id,product_id,product_name,producer,vintage,unit_price_cents,quantity)"
+  ].join(",");
   const config = window.WIJNKAST_CONFIG || {};
 
   const state = {
@@ -18,8 +23,11 @@
     authorizing: false,
     products: [],
     settings: [],
+    orders: [],
+    ordersError: null,
+    updatingOrderIds: new Set(),
     settingsInputs: new Map(),
-    activeTab: "products",
+    activeTab: "orders",
     editingProduct: null,
     productDirty: false,
     savingProduct: false,
@@ -36,10 +44,18 @@
     adminView: document.querySelector("#adminView"),
     logoutButton: document.querySelector("#logoutButton"),
     refreshButton: document.querySelector("#refreshButton"),
+    ordersTab: document.querySelector("#ordersTab"),
     productsTab: document.querySelector("#productsTab"),
     settingsTab: document.querySelector("#settingsTab"),
+    ordersPanel: document.querySelector("#ordersPanel"),
     productsPanel: document.querySelector("#productsPanel"),
     settingsPanel: document.querySelector("#settingsPanel"),
+    orderSearch: document.querySelector("#orderSearch"),
+    orderStatusFilter: document.querySelector("#orderStatusFilter"),
+    orderList: document.querySelector("#orderList"),
+    ordersStatus: document.querySelector("#ordersStatus"),
+    ordersEmpty: document.querySelector("#ordersEmpty"),
+    ordersMigrationHint: document.querySelector("#ordersMigrationHint"),
     productSearch: document.querySelector("#productSearch"),
     newProductButton: document.querySelector("#newProductButton"),
     productList: document.querySelector("#productList"),
@@ -196,8 +212,11 @@
     els.loginForm.addEventListener("submit", requestMagicLink);
     els.logoutButton.addEventListener("click", logout);
     els.refreshButton.addEventListener("click", refreshAdminData);
+    els.ordersTab.addEventListener("click", () => selectTab("orders"));
     els.productsTab.addEventListener("click", () => selectTab("products"));
     els.settingsTab.addEventListener("click", () => selectTab("settings"));
+    els.orderSearch.addEventListener("input", renderOrders);
+    els.orderStatusFilter.addEventListener("change", renderOrders);
     els.productSearch.addEventListener("input", renderProducts);
     els.newProductButton.addEventListener("click", () => openProductEditor());
     els.productForm.addEventListener("input", () => { state.productDirty = true; });
@@ -297,14 +316,17 @@
     state.isAdmin = false;
     state.products = [];
     state.settings = [];
+    state.orders = [];
+    state.ordersError = null;
+    state.updatingOrderIds.clear();
     state.settingsInputs.clear();
     els.logoutButton.disabled = false;
     showLogin("Je bent veilig uitgelogd.", "success");
   }
 
   async function loadAdminData() {
-    showLoading("Wijnen en website laden…");
-    const [productsResult, settingsResult] = await Promise.all([
+    showLoading("Reserveringen, wijnen en website laden…");
+    const [productsResult, settingsResult, ordersResult] = await Promise.all([
       state.client
         .from("products")
         .select(PRODUCT_SELECT)
@@ -313,13 +335,17 @@
       state.client
         .from("site_settings")
         .select(SETTING_SELECT)
-        .order("sort_order", { ascending: true })
+        .order("sort_order", { ascending: true }),
+      fetchOrders()
     ]);
 
     if (productsResult.error) throw productsResult.error;
     if (settingsResult.error) throw settingsResult.error;
     state.products = Array.isArray(productsResult.data) ? productsResult.data : [];
     state.settings = Array.isArray(settingsResult.data) ? settingsResult.data : [];
+    state.ordersError = ordersResult.error || null;
+    state.orders = !ordersResult.error && Array.isArray(ordersResult.data) ? ordersResult.data : [];
+    renderOrders();
     renderProducts();
     renderSettings();
   }
@@ -383,14 +409,293 @@
   }
 
   function selectTab(tab) {
-    state.activeTab = tab === "settings" ? "settings" : "products";
+    state.activeTab = ["orders", "products", "settings"].includes(tab) ? tab : "orders";
+    const ordersActive = state.activeTab === "orders";
+    const productsActive = state.activeTab === "products";
     const settingsActive = state.activeTab === "settings";
-    els.productsTab.classList.toggle("active", !settingsActive);
-    els.productsTab.setAttribute("aria-selected", String(!settingsActive));
+    els.ordersTab.classList.toggle("active", ordersActive);
+    els.ordersTab.setAttribute("aria-selected", String(ordersActive));
+    els.productsTab.classList.toggle("active", productsActive);
+    els.productsTab.setAttribute("aria-selected", String(productsActive));
     els.settingsTab.classList.toggle("active", settingsActive);
     els.settingsTab.setAttribute("aria-selected", String(settingsActive));
-    els.productsPanel.hidden = settingsActive;
+    els.ordersPanel.hidden = !ordersActive;
+    els.productsPanel.hidden = !productsActive;
     els.settingsPanel.hidden = !settingsActive;
+  }
+
+  function fetchOrders() {
+    return state.client
+      .from("orders")
+      .select(ORDER_SELECT)
+      .order("created_at", { ascending: false })
+      .limit(250);
+  }
+
+  function renderOrders() {
+    els.orderList.replaceChildren();
+    if (state.ordersError) {
+      els.ordersStatus.textContent = "Reserveringen konden nog niet veilig worden geladen.";
+      els.ordersEmpty.hidden = true;
+      els.ordersMigrationHint.hidden = false;
+      return;
+    }
+
+    els.ordersMigrationHint.hidden = true;
+    const query = els.orderSearch.value.trim().toLocaleLowerCase("nl-NL");
+    const filter = els.orderStatusFilter.value;
+    const orders = state.orders.filter((order) => {
+      if (filter === "open" && ["completed", "cancelled"].includes(order.status)) return false;
+      if (filter !== "open" && filter !== "all" && order.status !== filter) return false;
+      if (!query) return true;
+      const itemText = orderItems(order).map((item) => [item.producer, item.product_name, item.vintage].filter(Boolean).join(" ")).join(" ");
+      return [order.order_number, order.customer_name, order.phone, order.email, itemText]
+        .some((value) => String(value || "").toLocaleLowerCase("nl-NL").includes(query));
+    });
+
+    els.ordersStatus.textContent = `${orders.length} ${orders.length === 1 ? "reservering" : "reserveringen"}`;
+    els.ordersEmpty.hidden = orders.length > 0;
+    orders.forEach((order) => els.orderList.append(createOrderRow(order)));
+  }
+
+  function createOrderRow(order) {
+    const row = make("article", "order-row");
+    row.dataset.status = String(order.status || "new");
+
+    const heading = make("div", "order-heading");
+    const headingCopy = make("div");
+    headingCopy.append(
+      make("p", "order-number", order.order_number || "Reservering"),
+      make("time", "order-date", formatDate(order.created_at))
+    );
+    const badge = make("span", `order-status ${safeStatusClass(order.status)}`, statusLabel(order.status));
+    heading.append(headingCopy, badge);
+
+    const customer = make("div", "order-customer");
+    customer.append(make("h3", "", order.customer_name || "Onbekende klant"));
+    const contact = make("div", "order-contact");
+    if (order.phone) contact.append(createContactLink("tel", order.phone));
+    if (order.email) contact.append(createContactLink("mailto", order.email));
+    customer.append(contact);
+
+    const facts = make("div", "order-facts");
+    facts.append(
+      createOrderFact("Ontvangst", order.delivery_method === "shipping" ? "Verzenden" : "Ophalen"),
+      createOrderFact("Totaal", formatMoney(order.total_cents)),
+      createOrderFact("Flessen", String(orderItems(order).reduce((sum, item) => sum + Number(item.quantity || 0), 0)))
+    );
+
+    const items = make("ul", "order-items");
+    orderItems(order).forEach((item) => {
+      const name = [item.producer, item.product_name, item.vintage]
+        .filter(Boolean)
+        .filter((value, index, values) => values.findIndex((entry) => String(entry).toLowerCase() === String(value).toLowerCase()) === index)
+        .join(" · ") || "Wijn";
+      const line = make("li");
+      line.append(make("strong", "", `${Number(item.quantity || 0)} ×`), make("span", "", name));
+      items.append(line);
+    });
+
+    const notesText = humanOrderNotes(order.notes);
+    const notes = document.createElement("details");
+    notes.className = "order-notes";
+    notes.hidden = !notesText;
+    notes.append(make("summary", "", "Gegevens en opmerking"), make("p", "", notesText));
+
+    const controls = make("div", "order-controls");
+    const finalStatus = ["completed", "cancelled"].includes(order.status);
+    const customerWhatsApp = customerWhatsAppHref(order);
+    if (customerWhatsApp) {
+      const confirmation = make("a", "whatsapp-confirmation", "Stuur klantbevestiging via WhatsApp");
+      confirmation.href = customerWhatsApp;
+      confirmation.target = "_blank";
+      confirmation.rel = "noopener";
+      controls.append(confirmation);
+    }
+    const statusSelect = document.createElement("select");
+    statusSelect.setAttribute("aria-label", `Status van ${order.order_number || "reservering"}`);
+    orderStatusOptions(order.status).forEach((status) => {
+      const option = document.createElement("option");
+      option.value = status;
+      option.textContent = statusLabel(status);
+      option.selected = status === order.status;
+      statusSelect.append(option);
+    });
+    statusSelect.disabled = finalStatus || state.updatingOrderIds.has(order.id);
+    const save = make("button", "quiet-button save-order-status", "Status opslaan");
+    save.type = "button";
+    save.disabled = true;
+    statusSelect.addEventListener("change", () => {
+      save.disabled = statusSelect.value === order.status || state.updatingOrderIds.has(order.id);
+      save.textContent = statusSelect.value === "cancelled" ? "Annuleren en voorraad herstellen" : "Status opslaan";
+      save.classList.toggle("cancel-order", statusSelect.value === "cancelled");
+    });
+    save.addEventListener("click", () => updateOrderStatus(order, statusSelect.value));
+    controls.append(statusSelect, save);
+    if (finalStatus) controls.append(make("small", "", order.status === "cancelled" ? "Voorraad is bij annuleren één keer hersteld." : "Deze reservering is afgerond."));
+
+    row.append(heading, customer, facts, items);
+    if (notesText) row.append(notes);
+    row.append(controls);
+    return row;
+  }
+
+  function createContactLink(kind, value) {
+    const link = document.createElement("a");
+    link.textContent = String(value);
+    if (kind === "tel") link.href = `tel:${String(value).replace(/[^+\d]/g, "")}`;
+    else link.href = `mailto:${String(value).replace(/[\r\n]/g, "").trim()}`;
+    return link;
+  }
+
+  function customerWhatsAppHref(order) {
+    const phone = normalizeWhatsAppPhone(order?.phone);
+    if (!phone) return "";
+    const delivery = order.delivery_method === "shipping" ? "Verzenden" : "Ophalen bij Taste of Life";
+    const lines = [
+      `Beste ${order.customer_name || "wijnliefhebber"},`,
+      "",
+      `Je reservering ${order.order_number || ""} bij De Wijnkast van Taste of Life is bevestigd.`,
+      ...orderItems(order).map((item) => {
+        const name = [item.producer, item.product_name, item.vintage].filter(Boolean).join(" · ") || "Wijn";
+        return `${Number(item.quantity || 0)} × ${name}`;
+      }),
+      `Totaal: ${formatMoney(order.total_cents)}`,
+      `Ontvangst: ${delivery}`,
+      "",
+      "Bij ophalen of bezorgen controleren we 18+ met een geldig identiteitsbewijs.",
+      "Vriendelijke groet, Patrick · Taste of Life"
+    ];
+    return `https://wa.me/${phone}?text=${encodeURIComponent(lines.join("\n"))}`;
+  }
+
+  function normalizeWhatsAppPhone(value) {
+    let phone = String(value || "").replace(/\D/g, "");
+    if (phone.startsWith("00")) phone = phone.slice(2);
+    else if (phone.startsWith("0")) phone = `31${phone.slice(1)}`;
+    return /^\d{10,15}$/.test(phone) ? phone : "";
+  }
+
+  function createOrderFact(label, value) {
+    const fact = make("div");
+    fact.append(make("span", "", label), make("strong", "", value));
+    return fact;
+  }
+
+  function orderItems(order) {
+    return Array.isArray(order?.order_items) ? order.order_items : [];
+  }
+
+  function humanOrderNotes(value) {
+    return String(value || "")
+      .replace(/\\r\\n|\\n|\\r/g, "\n")
+      .replace(/\r\n?/g, "\n")
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line && !/^Aanvraag-ID\s*:/i.test(line))
+      .join("\n");
+  }
+
+  function orderStatusOptions(current) {
+    if (current === "cancelled") return ["cancelled"];
+    if (current === "completed") return ["completed"];
+    return ["new", "confirmed", "paid", "ready", "completed", "cancelled"];
+  }
+
+  function statusLabel(status) {
+    return ({
+      new: "Nieuw",
+      confirmed: "Bevestigd",
+      paid: "Betaald",
+      ready: "Klaar voor overdracht",
+      completed: "Afgerond",
+      cancelled: "Geannuleerd"
+    })[status] || "Onbekend";
+  }
+
+  function safeStatusClass(status) {
+    return ["new", "confirmed", "paid", "ready", "completed", "cancelled"].includes(status) ? status : "unknown";
+  }
+
+  function formatDate(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "Datum onbekend";
+    return new Intl.DateTimeFormat("nl-NL", {
+      day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit"
+    }).format(date);
+  }
+
+  async function updateOrderStatus(order, nextStatus) {
+    if (!state.client || nextStatus === order.status || state.updatingOrderIds.has(order.id)) return;
+    if (nextStatus === "cancelled") {
+      const bottles = orderItems(order).reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+      const confirmed = window.confirm(
+        `Reservering ${order.order_number} annuleren en ${bottles} ${bottles === 1 ? "fles" : "flessen"} terugboeken in de voorraad? Dit kan niet ongedaan worden gemaakt.`
+      );
+      if (!confirmed) return;
+    }
+    if (nextStatus === "completed") {
+      const confirmed = window.confirm(
+        `Reservering ${order.order_number} definitief afronden? Daarna kan de status niet meer worden gewijzigd.`
+      );
+      if (!confirmed) return;
+    }
+
+    state.updatingOrderIds.add(order.id);
+    renderOrders();
+    try {
+      const { data, error } = await state.client.rpc("update_wijnkast_order_status", {
+        target_order_id: order.id,
+        expected_updated_at: order.updated_at,
+        next_status: nextStatus
+      });
+      if (error) throw error;
+      const updated = Array.isArray(data) ? data[0] : data;
+      if (!updated?.id) throw new Error("ORDER_STATUS_MISSING");
+      await reloadOrdersAndProducts();
+      showToast(nextStatus === "cancelled"
+        ? "De reservering is geannuleerd en de voorraad is veilig hersteld."
+        : `De reservering staat nu op ‘${statusLabel(nextStatus)}’.`
+      );
+    } catch (error) {
+      showToast(friendlyOrderStatusError(error), true);
+    } finally {
+      state.updatingOrderIds.delete(order.id);
+      renderOrders();
+    }
+  }
+
+  async function reloadOrdersAndProducts() {
+    const [ordersResult, productsResult] = await Promise.all([
+      fetchOrders(),
+      state.client
+        .from("products")
+        .select(PRODUCT_SELECT)
+        .order("sort_order", { ascending: true })
+        .order("created_at", { ascending: false })
+    ]);
+    if (ordersResult.error) throw ordersResult.error;
+    if (productsResult.error) throw productsResult.error;
+    state.ordersError = null;
+    state.orders = Array.isArray(ordersResult.data) ? ordersResult.data : [];
+    state.products = Array.isArray(productsResult.data) ? productsResult.data : [];
+    renderOrders();
+    renderProducts();
+  }
+
+  function friendlyOrderStatusError(error) {
+    const message = String(error?.message || "");
+    const code = String(error?.code || "");
+    if (/ORDER_CONFLICT/i.test(message) || code === "40001") {
+      return "Deze reservering is intussen gewijzigd. Laad opnieuw en controleer de nieuwste status.";
+    }
+    if (/CANCELLED_ORDER_FINAL/i.test(message)) return "Een geannuleerde reservering kan niet opnieuw worden geopend.";
+    if (/COMPLETED_ORDER_FINAL/i.test(message)) return "Een afgeronde reservering kan niet meer worden gewijzigd.";
+    if (/RESTORE_PRODUCT_MISSING/i.test(message)) return "De voorraad kan voor deze oudere reservering niet automatisch worden hersteld. Pas niets aan en controleer de order handmatig.";
+    if (/update_wijnkast_order_status|schema cache|permission denied|42501/i.test(message)) {
+      return "Het veilige reserveringenbeheer moet eerst één keer in de database worden geactiveerd.";
+    }
+    return friendlyError(error, "De status kon niet veilig worden opgeslagen.");
   }
 
   function renderProducts() {

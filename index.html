@@ -140,6 +140,24 @@
         </div>
       </section>
 
+      <section class="how-it-works" aria-labelledby="howTitle">
+        <div class="how-inner">
+          <div class="how-heading">
+            <p class="eyebrow">Persoonlijk en eenvoudig</p>
+            <h2 id="howTitle">Zo werkt reserveren</h2>
+          </div>
+          <div class="how-steps">
+            <article><span>01</span><h3>Kies je wijn</h3><p>Leg de gewenste flessen in je wijnmand.</p></article>
+            <article><span>02</span><h3>Reserveer veilig</h3><p>Vul je gegevens in. De voorraad wordt meteen bijgewerkt.</p></article>
+            <article><span>03</span><h3>Persoonlijk contact</h3><p>Je krijgt een bevestiging en we stemmen ophalen of bezorgen af.</p></article>
+          </div>
+          <div class="app-actions" aria-label="De Wijnkast bewaren of delen">
+            <button class="quiet-action" id="installAppButton" type="button">Installeer De Wijnkast</button>
+            <button class="quiet-action" id="shareAppButton" type="button">Deel met een wijnliefhebber</button>
+          </div>
+        </div>
+      </section>
+
       <section class="about" id="over" aria-labelledby="aboutTitle">
         <div>
           <p class="eyebrow" data-site-setting="about.eyebrow">Taste of Life</p>
@@ -216,8 +234,9 @@
           </details>
           <label class="checkbox full">
             <input name="adult" type="checkbox" required />
-            <span>Ik ben 18 jaar of ouder en controleer mijn reservering.</span>
+            <span>Ik ben 18 jaar of ouder. Bij ophalen of bezorgen wordt mijn leeftijd opnieuw gecontroleerd met een geldig identiteitsbewijs.</span>
           </label>
+          <p class="age-notice full">Zonder geldige 18+-controle geven we de wijn niet mee. <a href="/leeftijdscontrole.html" target="_blank" rel="noopener">Lees onze werkwijze</a>.</p>
         </div>
         <div class="checkout-total"><span>Totaal</span><strong id="checkoutTotal">€ 0,00</strong></div>
         <button class="primary-button wide" id="placeOrderButton" type="submit">Reservering plaatsen</button>
@@ -233,6 +252,7 @@
       <div class="success-summary" id="successSummary"></div>
       <div class="success-actions">
         <button class="outline-button wide" id="copyOrderNumberButton" type="button">Reserveringsnummer kopiëren</button>
+        <button class="outline-button wide" id="shareConfirmationButton" type="button">Bevestiging delen of bewaren</button>
         <a class="whatsapp-button wide" id="successWhatsApp" href="#" target="_blank" rel="noopener">Vraag iets via WhatsApp</a>
         <button class="primary-button wide" id="closeSuccessButton" type="button">Verder kijken</button>
       </div>
@@ -244,6 +264,7 @@
       <nav class="footer-links" aria-label="Informatie">
         <a id="footerWhatsApp" href="#" target="_blank" rel="noopener">WhatsApp Patrick</a>
         <a href="mailto:patrick.tasteoflife@hotmail.com">E-mail Taste of Life</a>
+        <a href="/leeftijdscontrole.html">18+ en leeftijdscontrole</a>
         <a href="/privacy.html">Privacy</a>
         <span>Alleen voor 18 jaar en ouder</span>
       </nav>
