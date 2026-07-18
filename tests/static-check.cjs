@@ -4,6 +4,8 @@ const path = require("path");
 const root = path.resolve(__dirname, "..");
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const app = fs.readFileSync(path.join(root, "app.js"), "utf8");
+const catalogus = fs.readFileSync(path.join(root, "catalogus.js"), "utf8");
+const configScript = fs.readFileSync(path.join(root, "config.js"), "utf8");
 
 const missingIds = [...app.matchAll(/querySelector\("#([A-Za-z0-9_-]+)"\)/g)]
   .map((match) => match[1])
@@ -26,6 +28,17 @@ const requiredFiles = [
   "assets/icons/icon-maskable-512.png",
   "assets/icons/apple-touch-icon.png",
   "assets/wijnkast-hero.png",
+  "assets/share-wijnkast.jpg",
+  "caroline-morey-chambrees-2023.webp",
+  "caroline-morey-santenay-2024.webp",
+  "dagueneau-pur-sang-2023.webp",
+  "dagueneau-blanc-etc-2023.webp",
+  "chateau-de-la-cree-meursault-les-tillets-2020.webp",
+  "henri-prudhon-saint-aubin-le-ban-2024.webp",
+  "knoll-ried-schuett-2024.webp",
+  "les-forts-de-latour-2015.webp",
+  "tortochot-charmes-chambertin-2013.webp",
+  "les-horees-rose-bonheur-2023.webp",
   "supabase/schema.sql",
   "supabase/migrations/20260717_idempotent_reservations.sql",
   "supabase/migrations/20260717_order_schema_compatibility.sql",
@@ -171,8 +184,55 @@ if (serviceWorker.includes("cache.put(event.request")) throw new Error("Service 
 if (!serviceWorker.includes("WIJNKAST_SW_VERSION") || !adminApp.includes("ensureSafeServiceWorker")) {
   throw new Error("Een oude brede cache wordt niet vóór beheer bijgewerkt.");
 }
+if (!serviceWorker.includes('const VERSION = "wijnkast-v6-2-snel"') || !adminApp.includes("wijnkast-v6-2-snel")) {
+  throw new Error("De snelle klantenapp en beheeromgeving gebruiken niet dezelfde cacheversie.");
+}
 if (!headers.includes("/beheer\n") || !headers.includes("/beheer.html\n") || !headers.includes("Cache-Control: no-store")) {
   throw new Error("Beheerheaders missen de canonieke Cloudflare-route.");
+}
+
+if (!html.includes('property="og:image"') || !html.includes("/assets/share-wijnkast.jpg") || !html.includes('rel="canonical"')) {
+  throw new Error("De nette linkweergave voor WhatsApp en social media ontbreekt.");
+}
+if (!html.includes('id="shippingFields"') || !html.includes("data-shipping-required") || !html.includes('id="businessFields"')) {
+  throw new Error("De verkorte, slimme checkout ontbreekt.");
+}
+if (!app.includes("syncCheckoutFields") || !app.includes("input.required = shipping") || !app.includes("input.disabled = !shipping")) {
+  throw new Error("Bezorgvelden worden niet veilig alleen bij verzenden verplicht.");
+}
+const configuredWhatsApp = configScript.match(/whatsappNumber:\s*"([^"]+)"/)?.[1] || "";
+if (!html.includes('id="footerWhatsApp"') || !html.includes('id="successWhatsApp"') || !app.includes("https://wa.me/") || !/^\d{10,15}$/.test(configuredWhatsApp)) {
+  throw new Error("De WhatsApp-koppeling ontbreekt of heeft geen geldig nummer.");
+}
+if (!html.includes('id="successSummary"') || !html.includes('id="copyOrderNumberButton"') || !app.includes("renderSuccessSummary")) {
+  throw new Error("De nette reserveringsbevestiging ontbreekt.");
+}
+
+const optimizedImages = [
+  "caroline-morey-chambrees-2023.webp",
+  "caroline-morey-santenay-2024.webp",
+  "dagueneau-pur-sang-2023.webp",
+  "dagueneau-blanc-etc-2023.webp",
+  "chateau-de-la-cree-meursault-les-tillets-2020.webp",
+  "henri-prudhon-saint-aubin-le-ban-2024.webp",
+  "knoll-ried-schuett-2024.webp",
+  "les-forts-de-latour-2015.webp",
+  "tortochot-charmes-chambertin-2013.webp",
+  "les-horees-rose-bonheur-2023.webp"
+];
+for (const file of optimizedImages) {
+  const image = fs.readFileSync(path.join(root, file));
+  if (image.subarray(0, 4).toString("ascii") !== "RIFF" || image.subarray(8, 12).toString("ascii") !== "WEBP") {
+    throw new Error(`Geen geldig WebP-bestand: ${file}`);
+  }
+  if (image.length > 300_000) throw new Error(`Geoptimaliseerde wijnfoto is nog te groot: ${file}`);
+  if (!catalogus.includes(`image_url: "${file}"`)) throw new Error(`Catalogus gebruikt de snelle wijnfoto niet: ${file}`);
+  if (!serviceWorker.includes(`/${file}`)) throw new Error(`Snelle wijnfoto ontbreekt in de offline cache: ${file}`);
+}
+if (/image_url:\s*"[^"]+\.png"/.test(catalogus)) throw new Error("Catalogus verwijst nog naar zware PNG-wijnfoto's.");
+const shareImage = fs.readFileSync(path.join(root, "assets/share-wijnkast.jpg"));
+if (shareImage[0] !== 0xff || shareImage[1] !== 0xd8 || shareImage.length > 500_000) {
+  throw new Error("De linkvoorbeeldafbeelding is ongeldig of te zwaar.");
 }
 
 console.log(JSON.stringify({

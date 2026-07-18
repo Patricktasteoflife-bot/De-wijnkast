@@ -13,7 +13,7 @@ const payload = {
     phone: "0612345678",
     email: "test@example.com",
     delivery: "pickup",
-    notes: "Alleen een test"
+    notes: "Bedrijf: Taste of Life\\nAdres: Admiraal de Ruyterstraat 38\\nOpmerking: <graag bewaren>"
   },
   items: [{
     product_id: "40ea3bfc-4936-4c4d-a169-dbae92eadac1",
@@ -78,12 +78,21 @@ test("antwoordt direct terwijl de e-mailtaak nog loopt", async (t) => {
   const rpcBody = JSON.parse(rpcCall.options.body);
   assert.equal(rpcBody.customer.request_id, payload.request_id);
   assert.match(rpcBody.customer.notes, new RegExp(payload.request_id));
+  assert.doesNotMatch(rpcBody.customer.notes, /\\\\n/);
+  assert.match(rpcBody.customer.notes, /Adres: Admiraal de Ruyterstraat 38/);
 
   const resendCall = calls[1];
   assert.equal(resendCall.options.headers["Idempotency-Key"], "reservation/WK-TEST-1");
   const resendBody = JSON.parse(resendCall.options.body);
   assert.deepEqual(resendBody.to, ["owner@example.com"]);
   assert.match(resendBody.text, /1 × Santenay/);
+  assert.doesNotMatch(resendBody.text, /\\\\n/);
+  assert.match(resendBody.subject, /Nieuwe reservering van Testklant/);
+  assert.match(resendBody.html, /De Wijnkast/);
+  assert.match(resendBody.html, /Open De Wijnkast Beheer/);
+  assert.match(resendBody.html, /Admiraal de Ruyterstraat 38/);
+  assert.match(resendBody.html, /&lt;graag bewaren&gt;/);
+  assert.doesNotMatch(resendBody.html, /<graag bewaren>/);
 
   resolveEmail(new Response(JSON.stringify({ id: "mail-1" }), { status: 200 }));
   await backgroundTask;

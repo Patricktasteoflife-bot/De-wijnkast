@@ -1,4 +1,4 @@
-const VERSION = "wijnkast-v6-1-play";
+const VERSION = "wijnkast-v6-2-snel";
 const CACHE = `taste-of-life-${VERSION}`;
 const ASSETS = [
   "/",
@@ -10,21 +10,22 @@ const ASSETS = [
   "/manifest.webmanifest",
   "/privacy.html",
   "/assets/taste-of-life-logo.jpg",
+  "/assets/share-wijnkast.jpg",
   "/assets/icons/icon-192.png",
   "/assets/icons/icon-512.png",
   "/assets/icons/icon-maskable-512.png",
   "/assets/icons/apple-touch-icon.png",
   "/wijnkelder-hero-v2.jpg",
-  "/caroline-morey-chambrees-2023.png",
-  "/caroline-morey-santenay-2024.png",
-  "/dagueneau-pur-sang-2023.png",
-  "/dagueneau-blanc-etc-2023.png",
-  "/chateau-de-la-cree-meursault-les-tillets-2020.png",
-  "/henri-prudhon-saint-aubin-le-ban-2024.png",
-  "/knoll-ried-schuett-2024.png",
-  "/les-forts-de-latour-2015.png",
-  "/tortochot-charmes-chambertin-2013.png",
-  "/les-horees-rose-bonheur-2023.png"
+  "/caroline-morey-chambrees-2023.webp",
+  "/caroline-morey-santenay-2024.webp",
+  "/dagueneau-pur-sang-2023.webp",
+  "/dagueneau-blanc-etc-2023.webp",
+  "/chateau-de-la-cree-meursault-les-tillets-2020.webp",
+  "/henri-prudhon-saint-aubin-le-ban-2024.webp",
+  "/knoll-ried-schuett-2024.webp",
+  "/les-forts-de-latour-2015.webp",
+  "/tortochot-charmes-chambertin-2013.webp",
+  "/les-horees-rose-bonheur-2023.webp"
 ];
 const STATIC_PATHS = new Set(ASSETS.map((path) => path === "/" ? "/index.html" : path));
 

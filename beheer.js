@@ -2,7 +2,7 @@
   "use strict";
 
   const OWNER_EMAIL = "patrick.tasteoflife@hotmail.com";
-  const SAFE_SW_VERSION = "wijnkast-v6-1-play";
+  const SAFE_SW_VERSION = "wijnkast-v6-2-snel";
   const SW_RELOAD_KEY = "tol-wijnkast-admin-sw-reload";
   const PRODUCT_SELECT = [
     "id", "sku", "name", "producer", "vintage", "region", "country", "color",

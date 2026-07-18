@@ -8,8 +8,21 @@
   const CART_KEY = "tol-wijnkast-cart-v1";
   const CUSTOMER_KEY = "tol-wijnkast-customer-v1";
   const PENDING_ORDER_KEY = "tol-wijnkast-pending-order-v1";
+  const WHATSAPP_NUMBER = String(config.whatsappNumber || "31649017365").replace(/\D/g, "");
   const PENDING_RECONCILE_TTL = 5 * 60 * 1000;
   const previewProducts = Array.isArray(window.WIJNKAST_PRODUCTS) ? window.WIJNKAST_PRODUCTS : [];
+  const OPTIMIZED_PRODUCT_IMAGES = new Set([
+    "caroline-morey-chambrees-2023.png",
+    "caroline-morey-santenay-2024.png",
+    "dagueneau-pur-sang-2023.png",
+    "dagueneau-blanc-etc-2023.png",
+    "chateau-de-la-cree-meursault-les-tillets-2020.png",
+    "henri-prudhon-saint-aubin-le-ban-2024.png",
+    "knoll-ried-schuett-2024.png",
+    "les-forts-de-latour-2015.png",
+    "tortochot-charmes-chambertin-2013.png",
+    "les-horees-rose-bonheur-2023.png"
+  ]);
   const SITE_SETTING_RULES = Object.freeze({
     "site.browser_title": { target: "title", max: 100 },
     "site.meta_description": { target: "description", max: 240 },
@@ -83,13 +96,20 @@
     closeProduct: document.querySelector("#closeProductButton"),
     checkoutDialog: document.querySelector("#checkoutDialog"),
     checkoutForm: document.querySelector("#checkoutForm"),
+    deliverySelect: document.querySelector("#deliverySelect"),
+    shippingFields: document.querySelector("#shippingFields"),
+    shippingInputs: [...document.querySelectorAll("[data-shipping-required]")],
     closeCheckout: document.querySelector("#closeCheckoutButton"),
     checkoutTotal: document.querySelector("#checkoutTotal"),
     placeOrderButton: document.querySelector("#placeOrderButton"),
     formStatus: document.querySelector("#formStatus"),
     successDialog: document.querySelector("#successDialog"),
     successMessage: document.querySelector("#successMessage"),
+    successSummary: document.querySelector("#successSummary"),
+    successWhatsApp: document.querySelector("#successWhatsApp"),
+    copyOrderNumber: document.querySelector("#copyOrderNumberButton"),
     closeSuccess: document.querySelector("#closeSuccessButton"),
+    footerWhatsApp: document.querySelector("#footerWhatsApp"),
     toast: document.querySelector("#toast")
   };
 
@@ -97,9 +117,12 @@
 
   async function init() {
     bindEvents();
+    setupContactLinks();
     prefillCustomer();
+    syncCheckoutFields();
     const pendingOrder = applyPendingOrderGuard();
     void loadSiteSettings();
+    renderProductSkeletons();
     await loadProducts();
     renderAll();
     registerServiceWorker();
@@ -173,6 +196,8 @@
     });
     els.closeCheckout.addEventListener("click", () => els.checkoutDialog.close());
     els.closeSuccess.addEventListener("click", () => els.successDialog.close());
+    els.deliverySelect.addEventListener("change", syncCheckoutFields);
+    els.copyOrderNumber.addEventListener("click", copyConfirmedOrderNumber);
     els.checkoutForm.addEventListener("submit", submitOrder);
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape" && els.drawer.classList.contains("open")) closeCart();
@@ -216,7 +241,7 @@
       color: product.color || "Overig",
       price_cents: Number(product.price_cents || 0),
       stock: Number(product.stock || 0),
-      image_url: product.image_url || "",
+      image_url: optimizedProductImageUrl(product.image_url),
       description: product.description || "",
       created_at: product.created_at || ""
     };
@@ -226,6 +251,16 @@
     renderFilters();
     renderProducts();
     renderCart();
+  }
+
+  function renderProductSkeletons() {
+    els.empty.hidden = true;
+    els.grid.setAttribute("aria-busy", "true");
+    els.grid.innerHTML = Array.from({ length: 5 }, () => `
+      <article class="product-card product-skeleton" aria-hidden="true">
+        <div class="skeleton-image"></div>
+        <div class="skeleton-copy"><i></i><b></b><span></span><em></em></div>
+      </article>`).join("");
   }
 
   function renderFilters() {
@@ -259,6 +294,7 @@
 
   function renderProducts() {
     const products = visibleProducts();
+    els.grid.setAttribute("aria-busy", "false");
     els.empty.hidden = products.length > 0;
     els.grid.innerHTML = products.map((product) => {
       const cartQty = Number(state.cart[product.id] || 0);
@@ -441,7 +477,18 @@
     if (!cartItems().length) return;
     closeCart();
     if (!state.busy) els.formStatus.textContent = "";
+    syncCheckoutFields();
     els.checkoutDialog.showModal();
+  }
+
+  function syncCheckoutFields() {
+    const shipping = els.deliverySelect.value === "shipping";
+    els.shippingFields.hidden = !shipping;
+    els.shippingFields.setAttribute("aria-hidden", String(!shipping));
+    els.shippingInputs.forEach((input) => {
+      input.disabled = !shipping;
+      input.required = shipping;
+    });
   }
 
   async function submitOrder(event) {
@@ -703,6 +750,13 @@
   }
 
   function completeOrder(customer, result, isDemo, requestId) {
+    const confirmedItems = cartItems().map(({ product, quantity }) => ({
+      name: [product.producer || product.name, product.producer && product.name !== product.producer ? product.name : "", product.vintage]
+        .filter(Boolean)
+        .join(" · "),
+      quantity
+    }));
+    const confirmedTotal = Number(result?.total_cents || cartTotal());
     try {
       localStorage.setItem(CUSTOMER_KEY, JSON.stringify({
         name: customer.name,
@@ -720,10 +774,13 @@
     els.placeOrderButton.disabled = false;
     els.placeOrderButton.textContent = "Reservering plaatsen";
     els.formStatus.textContent = "";
-    els.successMessage.textContent = `${isDemo ? "Testreservering" : "Reservering"} ${result.order_number} is vastgelegd. We nemen persoonlijk contact met je op over ophalen of verzenden.`;
+    els.successMessage.textContent = `${isDemo ? "De testreservering" : "Je reservering"} is vastgelegd. We nemen persoonlijk contact met je op over ophalen of verzenden.`;
+    renderSuccessSummary(customer, result.order_number, confirmedItems, confirmedTotal);
     if (!els.successDialog.open) els.successDialog.showModal();
     els.checkoutForm.reset();
+    els.checkoutForm.querySelectorAll("details").forEach((details) => { details.open = false; });
     prefillCustomer();
+    syncCheckoutFields();
     if (!isDemo) void refreshProductsAfterOrder();
     clearPendingOrder(requestId);
   }
@@ -743,6 +800,46 @@
       const input = els.checkoutForm.elements[field];
       if (input && customer[field]) input.value = customer[field];
     });
+  }
+
+  function renderSuccessSummary(customer, orderNumber, items, totalCents) {
+    const delivery = customer.delivery === "shipping" ? "Verzenden" : "Ophalen bij Taste of Life";
+    const itemRows = items.map((item) => `<li><b>${escapeHtml(item.quantity)} × ${escapeHtml(item.name)}</b></li>`).join("");
+    els.successSummary.innerHTML = `
+      <div><span>Reserveringsnummer</span><strong>${escapeHtml(orderNumber)}</strong></div>
+      <div><span>Ontvangst</span><strong>${escapeHtml(delivery)}</strong></div>
+      ${Number.isFinite(totalCents) && totalCents > 0 ? `<div><span>Totaal</span><strong>${formatMoney(totalCents)}</strong></div>` : ""}
+      ${itemRows ? `<ul>${itemRows}</ul>` : ""}`;
+    els.copyOrderNumber.dataset.orderNumber = String(orderNumber || "");
+    els.successWhatsApp.href = whatsappHref(`Hallo Patrick, ik heb een vraag over reservering ${orderNumber} bij De Wijnkast.`);
+  }
+
+  async function copyConfirmedOrderNumber() {
+    const orderNumber = String(els.copyOrderNumber.dataset.orderNumber || "");
+    if (!orderNumber) return;
+    try {
+      await navigator.clipboard.writeText(orderNumber);
+      showToast("Reserveringsnummer gekopieerd.");
+    } catch {
+      showToast(`Reserveringsnummer: ${orderNumber}`);
+    }
+  }
+
+  function setupContactLinks() {
+    els.footerWhatsApp.href = whatsappHref("Hallo Patrick, ik heb een vraag over De Wijnkast.");
+    els.successWhatsApp.href = whatsappHref("Hallo Patrick, ik heb een vraag over De Wijnkast.");
+  }
+
+  function whatsappHref(message) {
+    return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+  }
+
+  function optimizedProductImageUrl(value) {
+    const imageUrl = String(value || "").trim();
+    const localPath = imageUrl.replace(/^\.?\//, "");
+    return OPTIMIZED_PRODUCT_IMAGES.has(localPath)
+      ? localPath.replace(/\.png$/i, ".webp")
+      : imageUrl;
   }
 
   function persistCart() {

@@ -10,7 +10,7 @@ window.WIJNKAST_PRODUCTS = [
     color: "Wit",
     price_cents: 10500,
     stock: 3,
-    image_url: "caroline-morey-chambrees-2023.png",
+    image_url: "caroline-morey-chambrees-2023.webp",
     description: "Een pure en elegante Chassagne-Montrachet van Chardonnay uit Le Chêne, Les Masures en La Bergerie, met stokken van ruim veertig jaar oud. De 2023 toont citroen, witte perzik en peer, aangevuld met een subtiele kruidigheid en kenmerkende minerale spanning. In de mond rijk en verfijnd tegelijk, met frisse zuren, een zachte textuur en een lange, precieze afdronk. Heerlijk bij coquilles, tarbot, kreeft, gevogelte in roomsaus of gerijpte zachte kazen.",
     created_at: "2026-07-16T15:00:00+02:00"
   },
@@ -25,7 +25,7 @@ window.WIJNKAST_PRODUCTS = [
     color: "Rood",
     price_cents: 6250,
     stock: 3,
-    image_url: "caroline-morey-santenay-2024.png",
+    image_url: "caroline-morey-santenay-2024.webp",
     description: "Een verfijnde Pinot Noir uit Santenay, met het soepele en elegante karakter dat Caroline Morey zo goed beheerst. Verwacht sappige kers, framboos en een vleugje rozenblaadjes, gedragen door frisse zuren, fijne tannines en een licht aardse toets. Jong al heerlijk levendig; schenk hem licht gekoeld bij charcuterie, geroosterd gevogelte, paddenstoelen of eend.",
     created_at: "2026-07-16T15:01:00+02:00"
   },
@@ -40,7 +40,7 @@ window.WIJNKAST_PRODUCTS = [
     color: "Wit",
     price_cents: 11500,
     stock: 3,
-    image_url: "dagueneau-pur-sang-2023.png",
+    image_url: "dagueneau-pur-sang-2023.webp",
     description: "Een iconische Sauvignon Blanc van Louis-Benjamin Dagueneau, afkomstig van La Folie bij Saint-Andelain. De 2023 combineert rijpe passievrucht en witte perzik met een zijdezachte structuur, ziltigheid en een krijtdroge, stenige finale. Krachtig én precies, met de spanning van de Loire en de textuur van grote witte Bourgogne. Prachtig bij langoustine, zeebaars, geitenkaas of verfijnde Aziatische gerechten.",
     created_at: "2026-07-16T15:02:00+02:00"
   },
@@ -55,7 +55,7 @@ window.WIJNKAST_PRODUCTS = [
     color: "Wit",
     price_cents: 9900,
     stock: 3,
-    image_url: "dagueneau-blanc-etc-2023.png",
+    image_url: "dagueneau-blanc-etc-2023.webp",
     description: "De toegankelijke ingang tot de wereld van Dagueneau, maar nog altijd onmiskenbaar groot van karakter. Sauvignon Blanc van jongere, biodynamisch bewerkte percelen met citroenschil, groen fruit, witte bloesem en een rokerige, vuursteenachtige mineraliteit. Geef hem even lucht: dan ontvouwt zich een rijke textuur met een strakke, lange finale. Heerlijk bij oesters, geitenkaas, ceviche of asperges.",
     created_at: "2026-07-16T15:03:00+02:00"
   },
@@ -70,7 +70,7 @@ window.WIJNKAST_PRODUCTS = [
     color: "Wit",
     price_cents: 6900,
     stock: 4,
-    image_url: "chateau-de-la-cree-meursault-les-tillets-2020.png",
+    image_url: "chateau-de-la-cree-meursault-les-tillets-2020.webp",
     description: "Een verfijnde Meursault van de koele, hoger gelegen lieu-dit Les Tillets. Witte perzik, citrusbloesem en geroosterde hazelnoot worden omringd door subtiel hout en een opvallend ziltige mineraliteit. De jaargang 2020 geeft concentratie zonder de frisse spanning te verliezen. Een prachtige tafelwijn bij coquilles, kreeft, kalfsvlees in roomsaus of risotto met truffel.",
     created_at: "2026-07-16T15:04:00+02:00"
   },
@@ -85,7 +85,7 @@ window.WIJNKAST_PRODUCTS = [
     color: "Wit",
     price_cents: 3750,
     stock: 6,
-    image_url: "henri-prudhon-saint-aubin-le-ban-2024.png",
+    image_url: "henri-prudhon-saint-aubin-le-ban-2024.webp",
     description: "Een charmante, glaszuivere Chardonnay uit Saint-Aubin. De stijl is rond en sappig, met rijpe appel, citrus en subtiele mineraliteit; de afdronk blijft verrassend fris en lang. Geef deze jonge wijn gerust wat lucht. Ideaal bij gebakken zalm, gevogelte, romige pasta of zachte kazen.",
     created_at: "2026-07-16T15:05:00+02:00"
   },
@@ -100,7 +100,7 @@ window.WIJNKAST_PRODUCTS = [
     color: "Wit",
     price_cents: 4500,
     stock: 4,
-    image_url: "knoll-ried-schuett-2024.png",
+    image_url: "knoll-ried-schuett-2024.webp",
     description: "Een krachtige, droge Grüner Veltliner Smaragd van het legendarische Weingut Knoll. Witte appel, mango, gekonfijte sinaasappelschil en fijne kruiden komen samen met de kenmerkende peperigheid en een zilt-minerale lengte. Vol en geconcentreerd, maar altijd strak in balans. Serveer bij schnitzel, geroosterde kip, stevige vis of gerechten met Aziatische specerijen.",
     created_at: "2026-07-16T15:06:00+02:00"
   },
@@ -115,7 +115,7 @@ window.WIJNKAST_PRODUCTS = [
     color: "Rood",
     price_cents: 23900,
     stock: 5,
-    image_url: "les-forts-de-latour-2015.png",
+    image_url: "les-forts-de-latour-2015.webp",
     description: "De tweede wijn van Château Latour, met dezelfde Pauillac-signatuur: cassis, zwarte bes, cederhout en grafiet. De 2015 heeft rijpe, verfijnde tannines en een krachtige maar beheerste structuur. Inmiddels mooi op dronk, met nog ruim ontwikkelingspotentieel. Een serieuze fles voor lamsvlees, entrecote, wild of een rustig diner waar de wijn de hoofdrol mag spelen.",
     created_at: "2026-07-16T15:07:00+02:00"
   },
@@ -130,7 +130,7 @@ window.WIJNKAST_PRODUCTS = [
     color: "Rood",
     price_cents: 15500,
     stock: 2,
-    image_url: "tortochot-charmes-chambertin-2013.png",
+    image_url: "tortochot-charmes-chambertin-2013.webp",
     description: "Een gerijpte Grand Cru Pinot Noir uit Charmes-Chambertin, waar parfum en finesse centraal staan. Rijpe kers, framboos, gedroogde roos en bosgrond worden aangevuld met zijdeachtige tannines en een lange, elegante afdronk. De 2013 heeft nu mooie volwassenheid, terwijl zijn Bourgondische spanning behouden blijft. Uitstekend bij eend, kalf, paddenstoelen of verfijnde gevogeltegerechten.",
     created_at: "2026-07-16T15:08:00+02:00"
   },
@@ -145,7 +145,7 @@ window.WIJNKAST_PRODUCTS = [
     color: "Rosé",
     price_cents: 5500,
     stock: 3,
-    image_url: "les-horees-rose-bonheur-2023.png",
+    image_url: "les-horees-rose-bonheur-2023.webp",
     description: "Een bijzondere rosé met een verfijnde, gastronomische uitstraling. Fris en droog van stijl, met zachte rode vruchten, een florale toets en een elegante spanning die hem ver boven het terrasniveau tilt. Heerlijk als aperitief, maar ook een mooie partner voor tonijn, charcuterie, salade met geitenkaas of zomerse gerechten van de barbecue.",
     created_at: "2026-07-16T15:09:00+02:00"
   }
