@@ -396,6 +396,30 @@ dialog h2 {
   border: 1px solid var(--line-soft);
 }
 
+.collection-group { margin-top: 28px; }
+.collection-group + .collection-group {
+  margin-top: 66px;
+  padding-top: 52px;
+  border-top: 1px solid rgba(214, 169, 95, .22);
+}
+.collection-group-heading { max-width: 700px; }
+.collection-group-heading .eyebrow { margin-bottom: 8px; }
+.collection-group-heading h3 {
+  margin: 0;
+  color: var(--cream);
+  font-family: var(--serif);
+  font-size: clamp(27px, 3vw, 39px);
+  font-weight: 400;
+  line-height: 1.08;
+}
+.collection-group-heading > p:last-child {
+  margin: 11px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.65;
+}
+.exclusive-collection .collection-group-heading h3 { color: var(--gold-pale); }
+
 .product-grid {
   margin-top: 15px;
   padding: 4px 2px 8px;
@@ -1112,6 +1136,11 @@ dialog::backdrop { background: rgba(2, 1, 1, .8); backdrop-filter: blur(5px); }
   .section-title > p:last-child { font-size: 11px; }
   .collection-options { bottom: 16px; }
   .collection-options summary { min-width: 174px; min-height: 47px; }
+  .collection-group { margin-top: 24px; }
+  .collection-group + .collection-group { margin-top: 40px; padding-top: 36px; }
+  .collection-group-heading { padding-inline: 3px; }
+  .collection-group-heading h3 { font-size: 29px; }
+  .collection-group-heading > p:last-child { font-size: 10px; }
   .product-grid { margin-right: -14px; padding-right: 14px; grid-auto-columns: minmax(230px, 76vw); gap: 12px; }
   .product-card { min-height: 440px; }
   .skeleton-image { min-height: 255px; }

@@ -23,6 +23,9 @@
     "tortochot-charmes-chambertin-2013.png",
     "les-horees-rose-bonheur-2023.png"
   ]);
+  const EVERYDAY_SORT_START = 1000;
+  const EXCLUSIVE_SORT_START = 5000;
+  const LEGACY_EVERYDAY_PRICE_MAX = 7500;
   const SITE_SETTING_RULES = Object.freeze({
     "site.browser_title": { target: "title", max: 100 },
     "site.meta_description": { target: "description", max: 240 },
@@ -74,6 +77,9 @@
   const els = {
     filters: document.querySelector("#filters"),
     grid: document.querySelector("#productGrid"),
+    exclusiveGrid: document.querySelector("#exclusiveProductGrid"),
+    everydayCollection: document.querySelector("#everydayCollection"),
+    exclusiveCollection: document.querySelector("#exclusiveCollection"),
     empty: document.querySelector("#emptyState"),
     sort: document.querySelector("#sortSelect"),
     sortControl: document.querySelector("#sortControl"),
@@ -262,6 +268,7 @@
       stock: Number(product.stock || 0),
       image_url: optimizedProductImageUrl(product.image_url),
       description: product.description || "",
+      sort_order: Number(product.sort_order || 0),
       created_at: product.created_at || ""
     };
   }
@@ -275,11 +282,14 @@
   function renderProductSkeletons() {
     els.empty.hidden = true;
     els.grid.setAttribute("aria-busy", "true");
-    els.grid.innerHTML = Array.from({ length: 5 }, () => `
+    els.exclusiveGrid.setAttribute("aria-busy", "true");
+    const skeletons = Array.from({ length: 4 }, () => `
       <article class="product-card product-skeleton" aria-hidden="true">
         <div class="skeleton-image"></div>
         <div class="skeleton-copy"><i></i><b></b><span></span><em></em></div>
       </article>`).join("");
+    els.grid.innerHTML = skeletons;
+    els.exclusiveGrid.innerHTML = skeletons;
   }
 
   function renderFilters() {
@@ -311,11 +321,28 @@
     });
   }
 
+  function productCollection(product) {
+    const sortOrder = Number(product?.sort_order || 0);
+    if (sortOrder >= EXCLUSIVE_SORT_START) return "exclusive";
+    if (sortOrder >= EVERYDAY_SORT_START) return "everyday";
+    return Number(product?.price_cents || 0) <= LEGACY_EVERYDAY_PRICE_MAX ? "everyday" : "exclusive";
+  }
+
   function renderProducts() {
     const products = visibleProducts();
     els.grid.setAttribute("aria-busy", "false");
+    els.exclusiveGrid.setAttribute("aria-busy", "false");
     els.empty.hidden = products.length > 0;
-    els.grid.innerHTML = products.map((product) => {
+    const everydayProducts = products.filter((product) => productCollection(product) === "everyday");
+    const exclusiveProducts = products.filter((product) => productCollection(product) === "exclusive");
+    els.everydayCollection.hidden = everydayProducts.length === 0;
+    els.exclusiveCollection.hidden = exclusiveProducts.length === 0;
+    renderProductGrid(els.grid, everydayProducts);
+    renderProductGrid(els.exclusiveGrid, exclusiveProducts);
+  }
+
+  function renderProductGrid(grid, products) {
+    grid.innerHTML = products.map((product) => {
       const cartQty = Number(state.cart[product.id] || 0);
       const available = Math.max(0, product.stock - cartQty);
       const metaParts = [product.country, product.region]
@@ -347,10 +374,10 @@
           </div>
         </article>`;
     }).join("");
-    els.grid.querySelectorAll("[data-add]").forEach((button) => {
+    grid.querySelectorAll("[data-add]").forEach((button) => {
       button.addEventListener("click", () => addToCart(button.dataset.add));
     });
-    els.grid.querySelectorAll("[data-view]").forEach((button) => {
+    grid.querySelectorAll("[data-view]").forEach((button) => {
       button.addEventListener("click", () => openProduct(button.dataset.view));
     });
   }

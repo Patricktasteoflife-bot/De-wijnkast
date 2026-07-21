@@ -2,7 +2,11 @@
   "use strict";
 
   const OWNER_EMAIL = "patrick.tasteoflife@hotmail.com";
-  const SAFE_SW_VERSION = "wijnkast-v6-3-afgerond";
+  const SAFE_SW_VERSION = "wijnkast-v6-4-collecties";
+  const EVERYDAY_SORT_START = 1000;
+  const EXCLUSIVE_SORT_START = 5000;
+  const COLLECTION_POSITION_MAX = 999;
+  const LEGACY_EVERYDAY_PRICE_MAX = 7500;
   const SW_RELOAD_KEY = "tol-wijnkast-admin-sw-reload";
   const PRODUCT_SELECT = [
     "id", "sku", "name", "producer", "vintage", "region", "country", "color",
@@ -736,6 +740,11 @@
       make("span", "", `${Number(product.stock || 0)} ${Number(product.stock) === 1 ? "fles" : "flessen"}`)
     );
     const badges = make("div", "product-badges");
+    badges.append(make(
+      "span",
+      "badge collection-badge",
+      productCollection(product) === "exclusive" ? "Exclusieve selectie" : "Voor elke wijnliefhebber"
+    ));
     if (!product.active) badges.append(make("span", "badge hidden", "Verborgen"));
     else badges.append(make("span", "badge", "Zichtbaar"));
     if (Number(product.stock) === 0) badges.append(make("span", "badge sold-out", "Uitverkocht"));
@@ -763,7 +772,8 @@
     setProductField("region", product?.region || "");
     setProductField("country", product?.country || "");
     setProductField("color", product?.color || "Overig");
-    setProductField("sort_order", String(product?.sort_order ?? 0));
+    setProductField("collection", productCollection(product));
+    setProductField("sort_order", String(productPosition(product)));
     setProductField("price", product ? centsToInput(product.price_cents) : "");
     setProductField("stock", String(product?.stock ?? 0));
     setProductField("image_url", product?.image_url || "");
@@ -860,7 +870,9 @@
 
     const priceCents = parsePrice(productField("price").value);
     const stock = parseInteger(productField("stock").value, 0, 9999);
-    const sortOrder = parseInteger(productField("sort_order").value || "0", 0, 9999);
+    const collection = productField("collection").value;
+    const position = parseInteger(productField("sort_order").value || "0", 0, COLLECTION_POSITION_MAX);
+    const sortOrder = encodeProductSortOrder(collection, position);
     const imageUrl = normalizeImageUrl(productField("image_url").value);
 
     return {
@@ -878,6 +890,26 @@
       active: productField("active").checked,
       sort_order: sortOrder
     };
+  }
+
+  function productCollection(product) {
+    const sortOrder = Number(product?.sort_order || 0);
+    if (sortOrder >= EXCLUSIVE_SORT_START) return "exclusive";
+    if (sortOrder >= EVERYDAY_SORT_START) return "everyday";
+    return Number(product?.price_cents || 0) <= LEGACY_EVERYDAY_PRICE_MAX ? "everyday" : "exclusive";
+  }
+
+  function productPosition(product) {
+    const sortOrder = Number(product?.sort_order || 0);
+    if (sortOrder >= EXCLUSIVE_SORT_START) return Math.min(COLLECTION_POSITION_MAX, sortOrder - EXCLUSIVE_SORT_START);
+    if (sortOrder >= EVERYDAY_SORT_START) return Math.min(COLLECTION_POSITION_MAX, sortOrder - EVERYDAY_SORT_START);
+    return 0;
+  }
+
+  function encodeProductSortOrder(collection, position) {
+    if (collection !== "everyday" && collection !== "exclusive") throw new Error("Kies een geldige afdeling.");
+    const safePosition = parseInteger(String(position), 0, COLLECTION_POSITION_MAX);
+    return (collection === "exclusive" ? EXCLUSIVE_SORT_START : EVERYDAY_SORT_START) + safePosition;
   }
 
   function renderSettings() {

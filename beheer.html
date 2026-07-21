@@ -218,9 +218,17 @@
             </datalist>
           </label>
           <label>
-            <span>Volgorde</span>
-            <input name="sort_order" type="number" min="0" max="9999" step="1" inputmode="numeric" />
-            <small>Een lager nummer staat eerder in het beheer.</small>
+            <span>Afdeling *</span>
+            <select name="collection" required>
+              <option value="everyday">Voor elke wijnliefhebber</option>
+              <option value="exclusive">Exclusieve selectie</option>
+            </select>
+            <small>Kies in welke rij de wijn in de winkel komt.</small>
+          </label>
+          <label>
+            <span>Volgorde binnen de rij</span>
+            <input name="sort_order" type="number" min="0" max="999" step="1" inputmode="numeric" />
+            <small>Een lager nummer staat eerder in deze rij.</small>
           </label>
           <label>
             <span>Prijs per fles *</span>

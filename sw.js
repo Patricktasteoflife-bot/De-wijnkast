@@ -1,4 +1,4 @@
-const VERSION = "wijnkast-v6-3-afgerond";
+const VERSION = "wijnkast-v6-4-collecties";
 const CACHE = `taste-of-life-${VERSION}`;
 const ASSETS = [
   "/",
