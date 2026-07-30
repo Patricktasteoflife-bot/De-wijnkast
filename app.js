@@ -23,6 +23,31 @@
     "tortochot-charmes-chambertin-2013.png",
     "les-horees-rose-bonheur-2023.png"
   ]);
+  const WEBSITE_CUTOUT_HOST = "primary.jwwb.nl";
+  const WEBSITE_CUTOUT_DIR = "assets/website-wines/";
+  const WEBSITE_CUTOUT_FILES = new Set([
+    "655e93dfc65ddfd3863dcbe5f77b9e2f2caf2b80_801207-high",
+    "badermimeur-chardonnay-high",
+    "bbc88b2d9b40b657ccf8407a2ccd0d01ead63a2c_801260_2-high",
+    "bxvdc21w2_0_1771339420249-removebg-preview-high",
+    "de-trafford-merlot-high-high",
+    "gayo05022-removebg-preview-high",
+    "kakheti-orange-high",
+    "libre-y-salvaje-high",
+    "moet-high-high",
+    "moscato-high",
+    "orin-swift-8-years-in-the-desert-2022-768x1024-1-high",
+    "pana01017_6-high",
+    "rh025_22_0_1771341693984-high",
+    "rh029_22_0_1771340638877-high",
+    "rh051_22_0_1771341691796-high",
+    "rh068_22_0_1771338770415-high",
+    "rh083_18_0_1771338772431-high",
+    "rhebokskloof-the-rhebok-high-high",
+    "saba05022_3-high",
+    "saba06021-high",
+    "saba10024-1-high"
+  ]);
   const EVERYDAY_SORT_START = 1000;
   const EXCLUSIVE_SORT_START = 5000;
   const LEGACY_EVERYDAY_PRICE_MAX = 7500;
@@ -256,6 +281,7 @@
   }
 
   function normalizeProduct(product) {
+    const cutoutAsset = websiteCutoutAssetUrl(product.image_url);
     return {
       id: product.id,
       name: product.name,
@@ -266,7 +292,8 @@
       color: product.color || "Overig",
       price_cents: Number(product.price_cents || 0),
       stock: Number(product.stock || 0),
-      image_url: optimizedProductImageUrl(product.image_url),
+      image_url: cutoutAsset || optimizedProductImageUrl(product.image_url),
+      image_is_cutout: Boolean(cutoutAsset),
       description: product.description || "",
       sort_order: Number(product.sort_order || 0),
       created_at: product.created_at || ""
@@ -351,10 +378,11 @@
       const image = product.image_url
         ? `<img src="${escapeAttr(product.image_url)}" alt="${escapeAttr(product.producer)} ${escapeAttr(product.name)}" loading="lazy" />`
         : `<div class="bottle-fallback" aria-hidden="true"></div>`;
+      const imageClass = product.image_is_cutout ? " product-image--cutout" : "";
       const stockText = product.stock === 1 ? "Laatste fles" : `Nog ${product.stock} flessen`;
       return `
         <article class="product-card">
-          <div class="product-image">
+          <div class="product-image${imageClass}">
             <span class="stock-badge ${product.stock > 1 ? "more" : ""}">${stockText}</span>
             <svg class="heart-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21S3 15.7 3 8.8A4.8 4.8 0 0 1 12 6a4.8 4.8 0 0 1 9 2.8C21 15.7 12 21 12 21Z" /></svg>
             ${image}
@@ -394,9 +422,10 @@
     const image = product.image_url
       ? `<img src="${escapeAttr(product.image_url)}" alt="${escapeAttr(product.producer)} ${escapeAttr(product.name)} ${escapeAttr(product.vintage)}" />`
       : `<div class="bottle-fallback" aria-hidden="true"></div>`;
+    const imageClass = product.image_is_cutout ? " product-detail-image--cutout" : "";
 
     els.productDialogContent.innerHTML = `
-      <div class="product-detail-image">${image}</div>
+      <div class="product-detail-image${imageClass}">${image}</div>
       <div class="product-detail-copy">
         <p class="eyebrow">${escapeHtml(metaParts.join(" · "))}</p>
         <h2 id="productDetailTitle">${escapeHtml(product.producer || product.name)}</h2>
@@ -483,9 +512,10 @@
       const thumbnail = product.image_url
         ? `<img src="${escapeAttr(product.image_url)}" alt="" />`
         : `<span class="mini-bottle" aria-hidden="true"></span>`;
+      const thumbnailClass = product.image_is_cutout ? " cart-thumb--cutout" : "";
       return `
       <article class="cart-line">
-        <div class="cart-thumb">${thumbnail}</div>
+        <div class="cart-thumb${thumbnailClass}">${thumbnail}</div>
         <div>
           <h3>${escapeHtml(product.producer || product.name)}</h3>
           <p>${escapeHtml([product.name, product.vintage].filter(Boolean).join(" · "))}</p>
@@ -980,6 +1010,25 @@
     return OPTIMIZED_PRODUCT_IMAGES.has(localPath)
       ? localPath.replace(/\.png$/i, ".webp")
       : imageUrl;
+  }
+
+  function websiteCutoutAssetUrl(value) {
+    const imageUrl = String(value || "").trim();
+    if (!imageUrl) return "";
+    try {
+      const url = new URL(imageUrl);
+      const filename = url.pathname.split("/").pop() || "";
+      const basename = filename.replace(/\.(?:png|webp)$/i, "");
+      if (url.protocol !== "https:" ||
+          url.hostname !== WEBSITE_CUTOUT_HOST ||
+          !/^[a-z0-9._-]+\.(?:png|webp)$/i.test(filename) ||
+          !WEBSITE_CUTOUT_FILES.has(basename)) {
+        return "";
+      }
+      return `${WEBSITE_CUTOUT_DIR}${basename}.webp`;
+    } catch {
+      return "";
+    }
   }
 
   function persistCart() {

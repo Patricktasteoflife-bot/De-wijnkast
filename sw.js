@@ -1,4 +1,4 @@
-const VERSION = "wijnkast-v6-5-wijnimport";
+const VERSION = "wijnkast-v6-6-wine-images";
 const CACHE = `taste-of-life-${VERSION}`;
 const ASSETS = [
   "/",
@@ -16,6 +16,27 @@ const ASSETS = [
   "/assets/icons/icon-512.png",
   "/assets/icons/icon-maskable-512.png",
   "/assets/icons/apple-touch-icon.png",
+  "/assets/website-wines/655e93dfc65ddfd3863dcbe5f77b9e2f2caf2b80_801207-high.webp",
+  "/assets/website-wines/badermimeur-chardonnay-high.webp",
+  "/assets/website-wines/bbc88b2d9b40b657ccf8407a2ccd0d01ead63a2c_801260_2-high.webp",
+  "/assets/website-wines/bxvdc21w2_0_1771339420249-removebg-preview-high.webp",
+  "/assets/website-wines/de-trafford-merlot-high-high.webp",
+  "/assets/website-wines/gayo05022-removebg-preview-high.webp",
+  "/assets/website-wines/kakheti-orange-high.webp",
+  "/assets/website-wines/libre-y-salvaje-high.webp",
+  "/assets/website-wines/moet-high-high.webp",
+  "/assets/website-wines/moscato-high.webp",
+  "/assets/website-wines/orin-swift-8-years-in-the-desert-2022-768x1024-1-high.webp",
+  "/assets/website-wines/pana01017_6-high.webp",
+  "/assets/website-wines/rh025_22_0_1771341693984-high.webp",
+  "/assets/website-wines/rh029_22_0_1771340638877-high.webp",
+  "/assets/website-wines/rh051_22_0_1771341691796-high.webp",
+  "/assets/website-wines/rh068_22_0_1771338770415-high.webp",
+  "/assets/website-wines/rh083_18_0_1771338772431-high.webp",
+  "/assets/website-wines/rhebokskloof-the-rhebok-high-high.webp",
+  "/assets/website-wines/saba05022_3-high.webp",
+  "/assets/website-wines/saba06021-high.webp",
+  "/assets/website-wines/saba10024-1-high.webp",
   "/wijnkelder-hero-v2.jpg",
   "/caroline-morey-chambrees-2023.webp",
   "/caroline-morey-santenay-2024.webp",

@@ -6,6 +6,12 @@ const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const app = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const catalogus = fs.readFileSync(path.join(root, "catalogus.js"), "utf8");
 const configScript = fs.readFileSync(path.join(root, "config.js"), "utf8");
+const wineImport = fs.readFileSync(path.join(root, "functions/api/import-website-wines.js"), "utf8");
+const websiteWineImages = [...wineImport.matchAll(/image_url:\s*"(https:\/\/primary[.]jwwb[.]nl\/[^"]+)"/g)]
+  .map((match) => {
+    const filename = new URL(match[1]).pathname.split("/").pop();
+    return `assets/website-wines/${filename.replace(/\.(?:png|webp)$/i, ".webp")}`;
+  });
 
 const missingIds = [...app.matchAll(/querySelector\("#([A-Za-z0-9_-]+)"\)/g)]
   .map((match) => match[1])
@@ -53,11 +59,18 @@ const requiredFiles = [
   "vendor/supabase.min.js",
   "vendor/supabase.LICENSE",
   "_headers",
-  "voorraad-template.csv"
+  "voorraad-template.csv",
+  ...websiteWineImages
 ];
 
 const missingFiles = requiredFiles.filter((file) => !fs.existsSync(path.join(root, file)));
 if (missingFiles.length) throw new Error(`Ontbrekende bestanden: ${missingFiles.join(", ")}`);
+if (websiteWineImages.length !== 21 || new Set(websiteWineImages).size !== 21) {
+  throw new Error("De 21 vaste websitewijnen hebben geen unieke lokale productafbeelding.");
+}
+if (websiteWineImages.some((file) => !app.includes(`"${path.basename(file, ".webp")}"`))) {
+  throw new Error("Niet iedere lokale productafbeelding is aan de juiste websitewijn gekoppeld.");
+}
 
 const manifest = JSON.parse(fs.readFileSync(path.join(root, "manifest.webmanifest"), "utf8"));
 if (manifest.id !== "/" || manifest.scope !== "/" || manifest.start_url !== "/") {
@@ -70,7 +83,6 @@ if (!manifest.icons.some((icon) => icon.sizes === "512x512" && icon.purpose === 
 if (html.includes("admin-connector.js")) throw new Error("De beheerconnector mag niet door de klantenapp worden geladen.");
 if (!app.includes("/api/reserve")) throw new Error("Beveiligde reserveringsroute ontbreekt.");
 const reserve = fs.readFileSync(path.join(root, "functions/api/reserve.js"), "utf8");
-const wineImport = fs.readFileSync(path.join(root, "functions/api/import-website-wines.js"), "utf8");
 if (!reserve.includes("/rpc/place_order")) throw new Error("Beveiligde bestelfunctie ontbreekt.");
 if (!reserve.includes("context.waitUntil")) throw new Error("Achtergrondmail ontbreekt.");
 if (!reserve.includes("fetchJsonWithTimeout")) throw new Error("Begrensde orderaanroep ontbreekt.");
@@ -205,7 +217,7 @@ if (serviceWorker.includes("cache.put(event.request")) throw new Error("Service 
 if (!serviceWorker.includes("WIJNKAST_SW_VERSION") || !adminApp.includes("ensureSafeServiceWorker")) {
   throw new Error("Een oude brede cache wordt niet vóór beheer bijgewerkt.");
 }
-if (!serviceWorker.includes('const VERSION = "wijnkast-v6-5-wijnimport"') || !adminApp.includes("wijnkast-v6-5-wijnimport")) {
+if (!serviceWorker.includes('const VERSION = "wijnkast-v6-6-wine-images"') || !adminApp.includes("wijnkast-v6-6-wine-images")) {
   throw new Error("De snelle klantenapp en beheeromgeving gebruiken niet dezelfde cacheversie.");
 }
 if (!headers.includes("/beheer\n") || !headers.includes("/beheer.html\n") || !headers.includes("Cache-Control: no-store")) {
