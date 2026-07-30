@@ -77,6 +77,9 @@ if (!/\.product-image\s*\{[^}]*height:\s*216px;[^}]*flex:\s*0 0 216px;/s.test(st
     !/\.product-image img\s*\{[^}]*height:\s*100%;[^}]*min-height:\s*0;/s.test(styles)) {
   throw new Error("De fotovlakken van bestaande en nieuwe wijnkaarten hebben niet dezelfde vaste hoogte.");
 }
+if (!/\.product-image--cutout img\s*\{[^}]*padding:\s*0;[^}]*object-fit:\s*contain;[^}]*transform:\s*scale\(1\.045\);/s.test(styles)) {
+  throw new Error("De vrijstaande flessen worden niet op één vaste, beeldvullende schaal weergegeven.");
+}
 
 const manifest = JSON.parse(fs.readFileSync(path.join(root, "manifest.webmanifest"), "utf8"));
 if (manifest.id !== "/" || manifest.scope !== "/" || manifest.start_url !== "/") {
@@ -232,7 +235,7 @@ if (serviceWorker.includes("cache.put(event.request")) throw new Error("Service 
 if (!serviceWorker.includes("WIJNKAST_SW_VERSION") || !adminApp.includes("ensureSafeServiceWorker")) {
   throw new Error("Een oude brede cache wordt niet vóór beheer bijgewerkt.");
 }
-if (!serviceWorker.includes('const VERSION = "wijnkast-v6-7-sale-prices"') || !adminApp.includes("wijnkast-v6-7-sale-prices")) {
+if (!serviceWorker.includes('const VERSION = "wijnkast-v6-8-equal-bottle-scale"') || !adminApp.includes("wijnkast-v6-8-equal-bottle-scale")) {
   throw new Error("De snelle klantenapp en beheeromgeving gebruiken niet dezelfde cacheversie.");
 }
 if (!headers.includes("/beheer\n") || !headers.includes("/beheer.html\n") || !headers.includes("Cache-Control: no-store")) {

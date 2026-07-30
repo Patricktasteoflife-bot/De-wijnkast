@@ -2,7 +2,7 @@
   "use strict";
 
   const OWNER_EMAIL = "patrick.tasteoflife@hotmail.com";
-  const SAFE_SW_VERSION = "wijnkast-v6-7-sale-prices";
+  const SAFE_SW_VERSION = "wijnkast-v6-8-equal-bottle-scale";
   const EVERYDAY_SORT_START = 1000;
   const EXCLUSIVE_SORT_START = 5000;
   const COLLECTION_POSITION_MAX = 999;
