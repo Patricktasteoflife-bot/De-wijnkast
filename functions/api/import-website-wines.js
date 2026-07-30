@@ -420,12 +420,22 @@ export async function onRequestPost({ env }) {
     return reply({ error: "De wijnen konden niet veilig worden toegevoegd." }, 502);
   }
   if (!insertResponse.ok || !Array.isArray(inserted)) {
+    const backendError = inserted && typeof inserted === "object" && !Array.isArray(inserted)
+      ? {
+          code: String(inserted.code || "UNKNOWN").slice(0, 40),
+          message: String(inserted.message || "Onbekende databasefout.").slice(0, 300),
+          details: String(inserted.details || "").slice(0, 300)
+        }
+      : null;
     console.error(
       "Websitewijnen zijn door de voorraad geweigerd",
       insertResponse.status,
-      inserted?.code || "UNKNOWN"
+      backendError?.code || "UNKNOWN"
     );
-    return reply({ error: "De wijnen konden niet veilig worden toegevoegd." }, 502);
+    return reply({
+      error: "De wijnen konden niet veilig worden toegevoegd.",
+      backend: backendError
+    }, 502);
   }
 
   return reply({
