@@ -10,6 +10,10 @@ const env = {
   SUPABASE_URL: "https://example.supabase.co",
   SUPABASE_SERVICE_ROLE_KEY: "server-key"
 };
+const authorizedRequest = () => new Request("https://wijnkast.example/api/import-website-wines", {
+  method: "POST",
+  headers: { Authorization: "Bearer admin-session" }
+});
 
 test("de vaste import bevat exact 21 wijnen en 46 flessen", () => {
   assert.equal(WEBSITE_WINES.length, 21);
@@ -45,6 +49,9 @@ test("de route voegt alleen ontbrekende vaste wijnen toe", async (t) => {
   const calls = [];
   globalThis.fetch = async (url, options = {}) => {
     calls.push({ url: String(url), options });
+    if (String(url).endsWith("/rpc/is_wijnkast_admin")) {
+      return new Response("true", { status: 200 });
+    }
     if (options.method === "GET") {
       return new Response(JSON.stringify([{
         sku: existing.sku,
@@ -57,22 +64,19 @@ test("de route voegt alleen ontbrekende vaste wijnen toe", async (t) => {
   };
 
   const response = await onRequestPost({
-    request: new Request("https://wijnkast.example/api/import-website-wines", {
-      method: "POST",
-      body: JSON.stringify([{ sku: "ONGEWENST", stock: 9999 }])
-    }),
+    request: authorizedRequest(),
     env
   });
   const result = await response.json();
 
   assert.equal(response.status, 201);
   assert.deepEqual(result, { added: 20, existing: 1, total: 21, bottles: 46 });
-  assert.equal(calls.length, 21);
+  assert.equal(calls.length, 22);
   assert.equal(calls[0].options.headers.apikey, "server-key");
-  assert.equal(calls[1].options.headers.Authorization, "Bearer server-key");
-  assert.equal(calls[1].options.headers.Prefer, "return=representation");
-  assert.equal(calls[1].url, "https://example.supabase.co/rest/v1/products");
-  const inserted = calls.slice(1).map((call) => JSON.parse(call.options.body));
+  assert.equal(calls[0].options.headers.Authorization, "Bearer admin-session");
+  assert.equal(calls[2].options.headers.Prefer, "return=representation");
+  assert.equal(calls[2].url, "https://example.supabase.co/rest/v1/products");
+  const inserted = calls.slice(2).map((call) => JSON.parse(call.options.body));
   assert.equal(inserted.length, 20);
   assert.ok(!inserted.some((wine) => wine.sku === existing.sku));
   assert.ok(!inserted.some((wine) => wine.sku === "ONGEWENST"));
@@ -83,13 +87,16 @@ test("een herhaalde import wijzigt of verdubbelt niets", async (t) => {
   t.after(() => { globalThis.fetch = originalFetch; });
 
   let calls = 0;
-  globalThis.fetch = async (_url, options = {}) => {
+  globalThis.fetch = async (url, options = {}) => {
     calls += 1;
+    if (String(url).endsWith("/rpc/is_wijnkast_admin")) {
+      return new Response("true", { status: 200 });
+    }
     assert.equal(options.method, "GET");
     return new Response(JSON.stringify(WEBSITE_WINES), { status: 200 });
   };
 
-  const response = await onRequestPost({ env });
+  const response = await onRequestPost({ request: authorizedRequest(), env });
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), {
     added: 0,
@@ -97,16 +104,40 @@ test("een herhaalde import wijzigt of verdubbelt niets", async (t) => {
     total: 21,
     bottles: 46
   });
-  assert.equal(calls, 1);
+  assert.equal(calls, 2);
 });
 
 test("de route stopt veilig zonder serverconfiguratie of bij een backendfout", async (t) => {
-  const missingConfig = await onRequestPost({ env: {} });
+  const missingConfig = await onRequestPost({ request: authorizedRequest(), env: {} });
   assert.equal(missingConfig.status, 503);
 
   const originalFetch = globalThis.fetch;
   t.after(() => { globalThis.fetch = originalFetch; });
-  globalThis.fetch = async () => new Response(JSON.stringify({ message: "fout" }), { status: 500 });
-  const backendFailure = await onRequestPost({ env });
+  globalThis.fetch = async (url) => String(url).endsWith("/rpc/is_wijnkast_admin")
+    ? new Response("true", { status: 200 })
+    : new Response(JSON.stringify({ message: "fout" }), { status: 500 });
+  const backendFailure = await onRequestPost({ request: authorizedRequest(), env });
   assert.equal(backendFailure.status, 502);
+});
+
+test("de route weigert ontbrekende of onbevoegde beheersessies", async (t) => {
+  const originalFetch = globalThis.fetch;
+  t.after(() => { globalThis.fetch = originalFetch; });
+
+  let calls = 0;
+  globalThis.fetch = async () => {
+    calls += 1;
+    return new Response("false", { status: 200 });
+  };
+
+  const withoutLogin = await onRequestPost({
+    request: new Request("https://wijnkast.example/api/import-website-wines", { method: "POST" }),
+    env
+  });
+  assert.equal(withoutLogin.status, 401);
+  assert.equal(calls, 0);
+
+  const withoutAdmin = await onRequestPost({ request: authorizedRequest(), env });
+  assert.equal(withoutAdmin.status, 403);
+  assert.equal(calls, 1);
 });

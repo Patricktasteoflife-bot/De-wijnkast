@@ -70,6 +70,7 @@ if (!manifest.icons.some((icon) => icon.sizes === "512x512" && icon.purpose === 
 if (html.includes("admin-connector.js")) throw new Error("De beheerconnector mag niet door de klantenapp worden geladen.");
 if (!app.includes("/api/reserve")) throw new Error("Beveiligde reserveringsroute ontbreekt.");
 const reserve = fs.readFileSync(path.join(root, "functions/api/reserve.js"), "utf8");
+const wineImport = fs.readFileSync(path.join(root, "functions/api/import-website-wines.js"), "utf8");
 if (!reserve.includes("/rpc/place_order")) throw new Error("Beveiligde bestelfunctie ontbreekt.");
 if (!reserve.includes("context.waitUntil")) throw new Error("Achtergrondmail ontbreekt.");
 if (!reserve.includes("fetchJsonWithTimeout")) throw new Error("Begrensde orderaanroep ontbreekt.");
@@ -96,6 +97,11 @@ if (/^\s*(?:insert\s+into|update|delete\s+from)\s+public[.](?:products|orders|or
 }
 if (!reserve.includes("ORDER_BACKEND_ERROR") || !reserve.includes("EXPECTED_ORDER_ERRORS")) {
   throw new Error("Technische databasefouten worden aan klanten getoond.");
+}
+if (!wineImport.includes('headers?.get("Authorization")') ||
+    !wineImport.includes("/rpc/is_wijnkast_admin") ||
+    !wineImport.includes('code: "ADMIN_REQUIRED"')) {
+  throw new Error("De vaste wijnimport vereist geen bewezen beheersessie.");
 }
 
 const adminHtml = fs.readFileSync(path.join(root, "beheer.html"), "utf8");
@@ -199,7 +205,7 @@ if (serviceWorker.includes("cache.put(event.request")) throw new Error("Service 
 if (!serviceWorker.includes("WIJNKAST_SW_VERSION") || !adminApp.includes("ensureSafeServiceWorker")) {
   throw new Error("Een oude brede cache wordt niet vóór beheer bijgewerkt.");
 }
-if (!serviceWorker.includes('const VERSION = "wijnkast-v6-4-collecties"') || !adminApp.includes("wijnkast-v6-4-collecties")) {
+if (!serviceWorker.includes('const VERSION = "wijnkast-v6-5-wijnimport"') || !adminApp.includes("wijnkast-v6-5-wijnimport")) {
   throw new Error("De snelle klantenapp en beheeromgeving gebruiken niet dezelfde cacheversie.");
 }
 if (!headers.includes("/beheer\n") || !headers.includes("/beheer.html\n") || !headers.includes("Cache-Control: no-store")) {

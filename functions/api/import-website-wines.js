@@ -354,8 +354,15 @@ export function winesMissingFrom(existingProducts) {
   });
 }
 
-export async function onRequestPost({ env }) {
-  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+export async function onRequestPost({ request, env }) {
+  const authorization = String(request?.headers?.get("Authorization") || "");
+  const accessToken = authorization.match(/^Bearer\s+(\S+)$/i)?.[1] || "";
+  if (!accessToken) {
+    return reply({ error: "Log opnieuw in bij Beheer.", code: "LOGIN_REQUIRED" }, 401);
+  }
+
+  const apiKey = env.SUPABASE_ANON_KEY || env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!env.SUPABASE_URL || !apiKey) {
     return reply({
       error: "De voorraadkoppeling is nog niet ingesteld.",
       code: "NOT_CONFIGURED"
@@ -369,10 +376,25 @@ export async function onRequestPost({ env }) {
 
   const baseUrl = trimSlash(env.SUPABASE_URL);
   const headers = {
-    apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-    Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+    apikey: apiKey,
+    Authorization: `Bearer ${accessToken}`,
     "Content-Type": "application/json"
   };
+
+  try {
+    const adminResponse = await fetch(`${baseUrl}/rest/v1/rpc/is_wijnkast_admin`, {
+      method: "POST",
+      headers,
+      body: "{}"
+    });
+    const isAdmin = await adminResponse.json().catch(() => false);
+    if (!adminResponse.ok || isAdmin !== true) {
+      return reply({ error: "Deze sessie heeft geen beheerrechten.", code: "ADMIN_REQUIRED" }, 403);
+    }
+  } catch (error) {
+    console.error("Beheerrechten voor de wijnimport konden niet worden gecontroleerd", error?.message || error);
+    return reply({ error: "De beheerrechten konden niet veilig worden gecontroleerd." }, 502);
+  }
 
   let existingResponse;
   let existingProducts;

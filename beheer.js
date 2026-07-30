@@ -2,7 +2,7 @@
   "use strict";
 
   const OWNER_EMAIL = "patrick.tasteoflife@hotmail.com";
-  const SAFE_SW_VERSION = "wijnkast-v6-4-collecties";
+  const SAFE_SW_VERSION = "wijnkast-v6-5-wijnimport";
   const EVERYDAY_SORT_START = 1000;
   const EXCLUSIVE_SORT_START = 5000;
   const COLLECTION_POSITION_MAX = 999;
@@ -303,8 +303,14 @@
       if (isAdmin !== true) throw new Error("NO_ADMIN_ACCESS");
 
       state.isAdmin = true;
+      const importResult = await importWebsiteWines(session);
       await loadAdminData();
       showAdmin();
+      if (importResult?.added > 0) {
+        showToast(`${importResult.added} nieuwe wijnen zijn toegevoegd.`);
+      } else if (importResult?.error) {
+        showToast("De nieuwe wijnen konden nog niet worden toegevoegd.", true);
+      }
     } catch (error) {
       state.isAdmin = false;
       const accessDenied = error?.message === "NO_ADMIN_ACCESS" || error?.message === "NO_MAGIC_LINK_ACCESS";
@@ -357,6 +363,25 @@
     renderOrders();
     renderProducts();
     renderSettings();
+  }
+
+  async function importWebsiteWines(session) {
+    const accessToken = String(session?.access_token || "");
+    if (!accessToken) return { error: true };
+    showLoading("Nieuwe wijnen controleren…");
+    try {
+      const response = await fetchWithTimeout("/api/import-website-wines", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`
+        }
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok || !result) return { error: true };
+      return result;
+    } catch {
+      return { error: true };
+    }
   }
 
   async function refreshAdminData() {

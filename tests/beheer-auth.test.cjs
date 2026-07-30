@@ -6,7 +6,7 @@ const vm = require("node:vm");
 
 const sourcePath = path.resolve(__dirname, "..", "beheer.js");
 
-function createHarness() {
+function createHarness(fetchImpl = globalThis.fetch) {
   const elements = new Map();
   const createElement = () => ({
     hidden: false,
@@ -34,7 +34,7 @@ function createHarness() {
   testSource = testSource.replace("  init();", "  // init uitgeschakeld voor beheerlogintests");
   testSource = testSource.replace(
     /\}\)\(\);\s*$/,
-    "  window.__beheerAuth = { state, els, requestMagicLink, authorizeAndLoad, friendlyError };\n})();"
+    "  window.__beheerAuth = { state, els, requestMagicLink, authorizeAndLoad, importWebsiteWines, friendlyError };\n})();"
   );
 
   const sandbox = {
@@ -46,6 +46,7 @@ function createHarness() {
     AbortController,
     Event,
     Date,
+    fetch: fetchImpl,
     setTimeout: () => 1,
     clearTimeout() {},
     WIJNKAST_CONFIG: {
@@ -139,4 +140,19 @@ test("Supabase-inlogcodes krijgen een duidelijke Nederlandse melding", () => {
   assert.match(friendlyError({ code: "over_request_rate_limit" }, "fallback"), /Wacht even/);
   assert.match(friendlyError({ code: "email_address_not_authorized" }, "fallback"), /mag geen beheerlink ontvangen/);
   assert.match(friendlyError({ code: "otp_disabled" }, "fallback"), /e-mail is uitgeschakeld/);
+});
+
+test("de vaste wijnimport gebruikt alleen de actieve beheersessie", async () => {
+  let received;
+  const { importWebsiteWines } = createHarness(async (input, init) => {
+    received = { input, init };
+    return new Response(JSON.stringify({ added: 21 }), { status: 201 });
+  });
+
+  const result = await importWebsiteWines({ access_token: "admin-session" });
+
+  assert.equal(result.added, 21);
+  assert.equal(received.input, "/api/import-website-wines");
+  assert.equal(received.init.method, "POST");
+  assert.equal(received.init.headers.Authorization, "Bearer admin-session");
 });
