@@ -53,7 +53,7 @@ test("de route voegt alleen ontbrekende vaste wijnen toe", async (t) => {
         vintage: existing.vintage
       }]), { status: 200 });
     }
-    return new Response(options.body, { status: 201 });
+    return new Response(JSON.stringify([JSON.parse(options.body)]), { status: 201 });
   };
 
   const response = await onRequestPost({
@@ -67,12 +67,12 @@ test("de route voegt alleen ontbrekende vaste wijnen toe", async (t) => {
 
   assert.equal(response.status, 201);
   assert.deepEqual(result, { added: 20, existing: 1, total: 21, bottles: 46 });
-  assert.equal(calls.length, 2);
+  assert.equal(calls.length, 21);
   assert.equal(calls[0].options.headers.apikey, "server-key");
   assert.equal(calls[1].options.headers.Authorization, "Bearer server-key");
   assert.equal(calls[1].options.headers.Prefer, "return=representation");
   assert.equal(calls[1].url, "https://example.supabase.co/rest/v1/products");
-  const inserted = JSON.parse(calls[1].options.body);
+  const inserted = calls.slice(1).map((call) => JSON.parse(call.options.body));
   assert.equal(inserted.length, 20);
   assert.ok(!inserted.some((wine) => wine.sku === existing.sku));
   assert.ok(!inserted.some((wine) => wine.sku === "ONGEWENST"));

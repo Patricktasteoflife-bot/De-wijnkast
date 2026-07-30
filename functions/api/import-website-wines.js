@@ -400,47 +400,42 @@ export async function onRequestPost({ env }) {
     });
   }
 
-  let insertResponse;
-  let inserted;
-  try {
-    // De ontbrekende SKU's zijn hierboven al veilig bepaald. Een gewone
-    // batchinsert voorkomt dat de import afhankelijk is van een databasebrede
-    // unieke SKU-constraint, die in oudere installaties mogelijk ontbreekt.
-    insertResponse = await fetch(`${baseUrl}/rest/v1/products`, {
-      method: "POST",
-      headers: {
-        ...headers,
-        Prefer: "return=representation"
-      },
-      body: JSON.stringify(missing)
-    });
-    inserted = await insertResponse.json().catch(() => []);
-  } catch (error) {
-    console.error("Websitewijnen konden niet worden toegevoegd", error?.message || error);
-    return reply({ error: "De wijnen konden niet veilig worden toegevoegd." }, 502);
+  const insertedSkus = [];
+  const failedSkus = [];
+  for (const wine of missing) {
+    try {
+      const insertResponse = await fetch(`${baseUrl}/rest/v1/products`, {
+        method: "POST",
+        headers: {
+          ...headers,
+          Prefer: "return=representation"
+        },
+        body: JSON.stringify(wine)
+      });
+      const inserted = await insertResponse.json().catch(() => []);
+      if (insertResponse.ok && Array.isArray(inserted) && inserted.length === 1) {
+        insertedSkus.push(wine.sku);
+      } else {
+        failedSkus.push(wine.sku);
+        console.error("Websitewijn is door de voorraad geweigerd", wine.sku, insertResponse.status);
+      }
+    } catch (error) {
+      failedSkus.push(wine.sku);
+      console.error("Websitewijn kon niet worden toegevoegd", wine.sku, error?.message || error);
+    }
   }
-  if (!insertResponse.ok || !Array.isArray(inserted)) {
-    const backendError = inserted && typeof inserted === "object" && !Array.isArray(inserted)
-      ? {
-          code: String(inserted.code || "UNKNOWN").slice(0, 40),
-          message: String(inserted.message || "Onbekende databasefout.").slice(0, 300),
-          details: String(inserted.details || "").slice(0, 300)
-        }
-      : null;
-    console.error(
-      "Websitewijnen zijn door de voorraad geweigerd",
-      insertResponse.status,
-      backendError?.code || "UNKNOWN"
-    );
+
+  if (failedSkus.length) {
     return reply({
-      error: "De wijnen konden niet veilig worden toegevoegd.",
-      backend: backendError
+      error: "Niet alle wijnen konden veilig worden toegevoegd.",
+      added: insertedSkus.length,
+      failed: failedSkus
     }, 502);
   }
 
   return reply({
-    added: inserted.length,
-    existing: WEBSITE_WINES.length - inserted.length,
+    added: insertedSkus.length,
+    existing: WEBSITE_WINES.length - insertedSkus.length,
     total: WEBSITE_WINES.length,
     bottles: expectedBottleCount
   }, 201);
