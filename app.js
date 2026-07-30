@@ -10,6 +10,7 @@
   const PENDING_ORDER_KEY = "tol-wijnkast-pending-order-v1";
   const WHATSAPP_NUMBER = String(config.whatsappNumber || "31649017365").replace(/\D/g, "");
   const PENDING_RECONCILE_TTL = 5 * 60 * 1000;
+  const ORIGINAL_PRICE_PATTERN = /^\[\[tol:original-price=(\d{1,9})\]\](?:\n|$)/;
   const previewProducts = Array.isArray(window.WIJNKAST_PRODUCTS) ? window.WIJNKAST_PRODUCTS : [];
   const OPTIMIZED_PRODUCT_IMAGES = new Set([
     "caroline-morey-chambrees-2023.png",
@@ -282,6 +283,8 @@
 
   function normalizeProduct(product) {
     const cutoutAsset = websiteCutoutAssetUrl(product.image_url);
+    const priceCents = Number(product.price_cents || 0);
+    const storedDescription = unpackProductDescription(product.description);
     return {
       id: product.id,
       name: product.name,
@@ -290,11 +293,15 @@
       region: product.region || "",
       country: product.country || "",
       color: product.color || "Overig",
-      price_cents: Number(product.price_cents || 0),
+      price_cents: priceCents,
+      original_price_cents: validOriginalPrice(
+        product.original_price_cents || storedDescription.originalPriceCents,
+        priceCents
+      ),
       stock: Number(product.stock || 0),
       image_url: cutoutAsset || optimizedProductImageUrl(product.image_url),
       image_is_cutout: Boolean(cutoutAsset),
-      description: product.description || "",
+      description: storedDescription.description,
       sort_order: Number(product.sort_order || 0),
       created_at: product.created_at || ""
     };
@@ -392,7 +399,7 @@
             <h3 class="product-title">${escapeHtml(product.producer || product.name)}</h3>
             ${product.producer && product.producer !== product.name ? `<p class="product-subtitle">${escapeHtml(product.name)}</p>` : ""}
             ${product.vintage ? `<p class="product-vintage">${escapeHtml(product.vintage)}</p>` : ""}
-            <strong class="price">${formatMoney(product.price_cents)}</strong>
+            ${productPriceMarkup(product)}
             <div class="product-actions">
               <button class="view-label" type="button" data-view="${escapeAttr(product.id)}">Bekijk wijn</button>
               <button class="add-button" type="button" data-add="${escapeAttr(product.id)}" aria-label="Voeg ${escapeAttr(product.producer || product.name)} toe aan de wijnmand" ${available <= 0 ? "disabled" : ""}>
@@ -435,7 +442,7 @@
         <p class="product-detail-description">${escapeHtml(product.description || "Een bijzondere fles uit de selectie van Taste of Life.")}</p>
         <div class="product-detail-purchase">
           <div>
-            <strong>${formatMoney(product.price_cents)}</strong>
+            ${productDetailPriceMarkup(product)}
             <small>${escapeHtml(stockText)}</small>
           </div>
           <button class="primary-button" type="button" data-detail-add="${escapeAttr(product.id)}" ${available <= 0 ? "disabled" : ""}>
@@ -1048,6 +1055,38 @@
       style: "currency",
       currency: config.currency || "EUR"
     }).format(Number(cents || 0) / 100);
+  }
+
+  function unpackProductDescription(value) {
+    const stored = String(value || "").replace(/\r\n?/g, "\n");
+    const match = stored.match(ORIGINAL_PRICE_PATTERN);
+    if (!match) return { description: stored, originalPriceCents: 0 };
+    return {
+      description: stored.slice(match[0].length),
+      originalPriceCents: Number(match[1])
+    };
+  }
+
+  function validOriginalPrice(originalPriceCents, currentPriceCents) {
+    const original = Number(originalPriceCents || 0);
+    const current = Number(currentPriceCents || 0);
+    return Number.isSafeInteger(original) && original > current ? original : 0;
+  }
+
+  function productPriceMarkup(product) {
+    const originalPriceCents = validOriginalPrice(product.original_price_cents, product.price_cents);
+    return `
+      <div class="product-price${originalPriceCents ? " has-offer" : ""}">
+        ${originalPriceCents ? `<span class="product-original-price">Van <s>${formatMoney(originalPriceCents)}</s></span>` : ""}
+        <strong class="price">${originalPriceCents ? '<span class="price-label">Voor</span>' : ""}${formatMoney(product.price_cents)}</strong>
+      </div>`;
+  }
+
+  function productDetailPriceMarkup(product) {
+    const originalPriceCents = validOriginalPrice(product.original_price_cents, product.price_cents);
+    return `
+      ${originalPriceCents ? `<span class="product-detail-original-price">Van <s>${formatMoney(originalPriceCents)}</s></span>` : ""}
+      <strong>${originalPriceCents ? '<span class="product-detail-price-label">Voor</span>' : ""}${formatMoney(product.price_cents)}</strong>`;
   }
 
   function showToast(message) {

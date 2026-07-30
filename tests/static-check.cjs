@@ -4,6 +4,7 @@ const path = require("path");
 const root = path.resolve(__dirname, "..");
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const app = fs.readFileSync(path.join(root, "app.js"), "utf8");
+const styles = fs.readFileSync(path.join(root, "styles.css"), "utf8");
 const catalogus = fs.readFileSync(path.join(root, "catalogus.js"), "utf8");
 const configScript = fs.readFileSync(path.join(root, "config.js"), "utf8");
 const wineImport = fs.readFileSync(path.join(root, "functions/api/import-website-wines.js"), "utf8");
@@ -70,6 +71,11 @@ if (websiteWineImages.length !== 21 || new Set(websiteWineImages).size !== 21) {
 }
 if (websiteWineImages.some((file) => !app.includes(`"${path.basename(file, ".webp")}"`))) {
   throw new Error("Niet iedere lokale productafbeelding is aan de juiste websitewijn gekoppeld.");
+}
+if (!/\.product-image\s*\{[^}]*height:\s*216px;[^}]*flex:\s*0 0 216px;/s.test(styles) ||
+    !/\.product-image\s*\{\s*height:\s*255px;\s*min-height:\s*255px;\s*flex-basis:\s*255px;/s.test(styles) ||
+    !/\.product-image img\s*\{[^}]*height:\s*100%;[^}]*min-height:\s*0;/s.test(styles)) {
+  throw new Error("De fotovlakken van bestaande en nieuwe wijnkaarten hebben niet dezelfde vaste hoogte.");
 }
 
 const manifest = JSON.parse(fs.readFileSync(path.join(root, "manifest.webmanifest"), "utf8"));
@@ -164,6 +170,15 @@ if (!adminApp.includes('rpc("is_wijnkast_admin")') || !adminApp.includes('rpc("c
 if (!adminHtml.includes('id="ordersTab"') || !adminHtml.includes('id="ordersPanel"') || !adminApp.includes('rpc("update_wijnkast_order_status"')) {
   throw new Error("Het reserveringenbeheer ontbreekt.");
 }
+if (!adminHtml.includes('name="original_price"') ||
+    !adminHtml.includes("Van-prijs") ||
+    !adminHtml.includes("Voor-prijs / verkoopprijs") ||
+    !adminApp.includes("packProductDescription") ||
+    !adminApp.includes("De van-prijs moet hoger zijn dan de voor-prijs.") ||
+    !app.includes("productPriceMarkup") ||
+    !app.includes("productDetailPriceMarkup")) {
+  throw new Error("De beheerbare van- en voor-prijs ontbreekt.");
+}
 if (!adminApp.includes("customerWhatsAppHref") || !adminApp.includes("Stuur klantbevestiging via WhatsApp")) {
   throw new Error("De handmatige klantbevestiging via WhatsApp ontbreekt.");
 }
@@ -217,7 +232,7 @@ if (serviceWorker.includes("cache.put(event.request")) throw new Error("Service 
 if (!serviceWorker.includes("WIJNKAST_SW_VERSION") || !adminApp.includes("ensureSafeServiceWorker")) {
   throw new Error("Een oude brede cache wordt niet vóór beheer bijgewerkt.");
 }
-if (!serviceWorker.includes('const VERSION = "wijnkast-v6-6-wine-images"') || !adminApp.includes("wijnkast-v6-6-wine-images")) {
+if (!serviceWorker.includes('const VERSION = "wijnkast-v6-7-sale-prices"') || !adminApp.includes("wijnkast-v6-7-sale-prices")) {
   throw new Error("De snelle klantenapp en beheeromgeving gebruiken niet dezelfde cacheversie.");
 }
 if (!headers.includes("/beheer\n") || !headers.includes("/beheer.html\n") || !headers.includes("Cache-Control: no-store")) {

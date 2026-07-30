@@ -387,6 +387,13 @@ input[aria-invalid="true"], textarea[aria-invalid="true"] { border-color: var(--
 .product-copy p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .product-copy small { display: block; margin-top: 5px; color: #786e64; font-size: 10px; }
 .product-numbers { min-width: 110px; text-align: right; }
+.product-numbers .product-original-price {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--muted);
+  font-size: 11px;
+  text-decoration-color: rgba(214, 169, 95, .78);
+}
 .product-numbers strong { display: block; color: var(--gold-pale); font-family: var(--serif); font-size: 20px; font-weight: 400; }
 .product-numbers span { display: block; margin-top: 5px; color: var(--cream-soft); font-size: 11px; }
 .product-badges { margin-top: 8px; display: flex; justify-content: flex-end; gap: 6px; }

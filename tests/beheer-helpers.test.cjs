@@ -9,7 +9,7 @@ let source = fs.readFileSync(sourcePath, "utf8");
 source = source.replace("  init();", "  // init uitgeschakeld voor zuivere helpertests");
 source = source.replace(
   /\}\)\(\);\s*$/,
-  "  window.__beheerHelpers = { parsePrice, parseInteger, normalizeImageUrl, normalizeSettingValue, cleanText, normalizeWhatsAppPhone };\n})();"
+  "  window.__beheerHelpers = { parsePrice, parseOptionalPrice, parseInteger, normalizeImageUrl, normalizeSettingValue, cleanText, normalizeWhatsAppPhone, packProductDescription, unpackProductDescription, validOriginalPrice };\n})();"
 );
 
 const sandbox = {
@@ -32,6 +32,17 @@ test("Nederlandse prijzen worden exact naar centen omgezet", () => {
   assert.equal(helpers.parsePrice("19"), 1900);
   assert.throws(() => helpers.parsePrice("12,345"));
   assert.throws(() => helpers.parsePrice("-1"));
+  assert.equal(helpers.parseOptionalPrice(""), null);
+});
+
+test("van-prijs blijft verborgen opgeslagen en wordt veilig teruggelezen", () => {
+  const stored = helpers.packProductDescription("Mooie aanbieding.", 7995);
+  assert.equal(stored, "[[tol:original-price=7995]]\nMooie aanbieding.");
+  assert.equal(helpers.unpackProductDescription(stored).description, "Mooie aanbieding.");
+  assert.equal(helpers.unpackProductDescription(stored).originalPriceCents, 7995);
+  assert.equal(helpers.validOriginalPrice(7995, 6250), 7995);
+  assert.equal(helpers.validOriginalPrice(6250, 6250), 0);
+  assert.equal(helpers.packProductDescription("Normale wijn.", null), "Normale wijn.");
 });
 
 test("voorraad accepteert alleen veilige gehele aantallen", () => {

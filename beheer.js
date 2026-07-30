@@ -2,12 +2,14 @@
   "use strict";
 
   const OWNER_EMAIL = "patrick.tasteoflife@hotmail.com";
-  const SAFE_SW_VERSION = "wijnkast-v6-6-wine-images";
+  const SAFE_SW_VERSION = "wijnkast-v6-7-sale-prices";
   const EVERYDAY_SORT_START = 1000;
   const EXCLUSIVE_SORT_START = 5000;
   const COLLECTION_POSITION_MAX = 999;
   const LEGACY_EVERYDAY_PRICE_MAX = 7500;
   const SW_RELOAD_KEY = "tol-wijnkast-admin-sw-reload";
+  const ORIGINAL_PRICE_PREFIX = "[[tol:original-price=";
+  const ORIGINAL_PRICE_PATTERN = /^\[\[tol:original-price=(\d{1,9})\]\](?:\n|$)/;
   const PRODUCT_SELECT = [
     "id", "sku", "name", "producer", "vintage", "region", "country", "color",
     "description", "image_url", "price_cents", "stock", "active", "sort_order",
@@ -765,8 +767,16 @@
     );
 
     const numbers = make("div", "product-numbers");
+    const storedDescription = unpackProductDescription(product.description);
+    const originalPriceCents = validOriginalPrice(
+      product.original_price_cents || storedDescription.originalPriceCents,
+      product.price_cents
+    );
+    if (originalPriceCents) {
+      numbers.append(make("del", "product-original-price", `Van ${formatMoney(originalPriceCents)}`));
+    }
     numbers.append(
-      make("strong", "", formatMoney(product.price_cents)),
+      make("strong", "", originalPriceCents ? `Voor ${formatMoney(product.price_cents)}` : formatMoney(product.price_cents)),
       make("span", "", `${Number(product.stock || 0)} ${Number(product.stock) === 1 ? "fles" : "flessen"}`)
     );
     const badges = make("div", "product-badges");
@@ -804,10 +814,16 @@
     setProductField("color", product?.color || "Overig");
     setProductField("collection", productCollection(product));
     setProductField("sort_order", String(productPosition(product)));
+    const storedDescription = unpackProductDescription(product?.description);
+    const originalPriceCents = validOriginalPrice(
+      product?.original_price_cents || storedDescription.originalPriceCents,
+      product?.price_cents
+    );
+    setProductField("original_price", originalPriceCents ? centsToInput(originalPriceCents) : "");
     setProductField("price", product ? centsToInput(product.price_cents) : "");
     setProductField("stock", String(product?.stock ?? 0));
     setProductField("image_url", product?.image_url || "");
-    setProductField("description", product?.description || "");
+    setProductField("description", storedDescription.description);
     productField("active").checked = product ? product.active === true : true;
 
     document.body.classList.add("dialog-open");
@@ -899,6 +915,10 @@
     if (!color) throw new Error("Vul de soort of kleur van de wijn in.");
 
     const priceCents = parsePrice(productField("price").value);
+    const originalPriceCents = parseOptionalPrice(productField("original_price").value);
+    if (originalPriceCents !== null && originalPriceCents <= priceCents) {
+      throw new Error("De van-prijs moet hoger zijn dan de voor-prijs.");
+    }
     const stock = parseInteger(productField("stock").value, 0, 9999);
     const collection = productField("collection").value;
     const position = parseInteger(productField("sort_order").value || "0", 0, COLLECTION_POSITION_MAX);
@@ -913,7 +933,10 @@
       region: nullableText(productField("region").value, 160),
       country: nullableText(productField("country").value, 100),
       color,
-      description: nullableText(productField("description").value, 3000, true),
+      description: packProductDescription(
+        nullableText(productField("description").value, 3000, true),
+        originalPriceCents
+      ),
       image_url: imageUrl,
       price_cents: priceCents,
       stock,
@@ -1227,6 +1250,34 @@
       throw new Error("Deze prijs is te hoog.");
     }
     return cents;
+  }
+
+  function parseOptionalPrice(value) {
+    return String(value ?? "").trim() ? parsePrice(value) : null;
+  }
+
+  // Bewaar de optionele van-prijs in het bestaande omschrijvingsveld, zodat
+  // aanbiedingen direct werken met bestaande databases en back-ups.
+  function packProductDescription(description, originalPriceCents) {
+    const copy = String(description || "").replace(/\r\n?/g, "\n").trim();
+    if (!originalPriceCents) return copy || null;
+    return `${ORIGINAL_PRICE_PREFIX}${originalPriceCents}]]${copy ? `\n${copy}` : ""}`;
+  }
+
+  function unpackProductDescription(value) {
+    const stored = String(value || "").replace(/\r\n?/g, "\n");
+    const match = stored.match(ORIGINAL_PRICE_PATTERN);
+    if (!match) return { description: stored, originalPriceCents: 0 };
+    return {
+      description: stored.slice(match[0].length),
+      originalPriceCents: Number(match[1])
+    };
+  }
+
+  function validOriginalPrice(originalPriceCents, currentPriceCents) {
+    const original = Number(originalPriceCents || 0);
+    const current = Number(currentPriceCents || 0);
+    return Number.isSafeInteger(original) && original > current ? original : 0;
   }
 
   function centsToInput(cents) {
