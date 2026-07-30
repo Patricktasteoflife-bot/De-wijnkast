@@ -70,7 +70,8 @@ test("de route voegt alleen ontbrekende vaste wijnen toe", async (t) => {
   assert.equal(calls.length, 2);
   assert.equal(calls[0].options.headers.apikey, "server-key");
   assert.equal(calls[1].options.headers.Authorization, "Bearer server-key");
-  assert.equal(calls[1].options.headers.Prefer, "resolution=ignore-duplicates,return=representation");
+  assert.equal(calls[1].options.headers.Prefer, "return=representation");
+  assert.equal(calls[1].url, "https://example.supabase.co/rest/v1/products");
   const inserted = JSON.parse(calls[1].options.body);
   assert.equal(inserted.length, 20);
   assert.ok(!inserted.some((wine) => wine.sku === existing.sku));

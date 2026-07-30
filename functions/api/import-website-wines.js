@@ -403,11 +403,14 @@ export async function onRequestPost({ env }) {
   let insertResponse;
   let inserted;
   try {
-    insertResponse = await fetch(`${baseUrl}/rest/v1/products?on_conflict=sku`, {
+    // De ontbrekende SKU's zijn hierboven al veilig bepaald. Een gewone
+    // batchinsert voorkomt dat de import afhankelijk is van een databasebrede
+    // unieke SKU-constraint, die in oudere installaties mogelijk ontbreekt.
+    insertResponse = await fetch(`${baseUrl}/rest/v1/products`, {
       method: "POST",
       headers: {
         ...headers,
-        Prefer: "resolution=ignore-duplicates,return=representation"
+        Prefer: "return=representation"
       },
       body: JSON.stringify(missing)
     });
@@ -417,6 +420,11 @@ export async function onRequestPost({ env }) {
     return reply({ error: "De wijnen konden niet veilig worden toegevoegd." }, 502);
   }
   if (!insertResponse.ok || !Array.isArray(inserted)) {
+    console.error(
+      "Websitewijnen zijn door de voorraad geweigerd",
+      insertResponse.status,
+      inserted?.code || "UNKNOWN"
+    );
     return reply({ error: "De wijnen konden niet veilig worden toegevoegd." }, 502);
   }
 
