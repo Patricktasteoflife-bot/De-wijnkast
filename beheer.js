@@ -254,31 +254,35 @@
     setLoginBusy(true);
     setMessage(els.loginMessage, "De beveiligde link wordt verstuurd…");
 
-    const redirectUrl = String(config.adminRedirectUrl || "").trim();
-    if (!/^https:\/\/[^/]+\/beheer$/.test(redirectUrl)) {
-      setLoginBusy(false);
-      setMessage(els.loginMessage, "De vaste beheerlink is nog niet ingesteld.", "error");
-      return;
-    }
-    const { error } = await state.client.auth.signInWithOtp({
-      email: OWNER_EMAIL,
-      options: {
-        emailRedirectTo: redirectUrl,
-        shouldCreateUser: true
+    let linkSent = false;
+    try {
+      const redirectUrl = String(config.adminRedirectUrl || "").trim();
+      if (!/^https:\/\/[^/]+\/beheer$/.test(redirectUrl)) {
+        setMessage(els.loginMessage, "De vaste beheerlink is nog niet ingesteld.", "error");
+        return;
       }
-    });
 
-    if (error) {
-      setLoginBusy(false);
+      const { error } = await state.client.auth.signInWithOtp({
+        email: OWNER_EMAIL,
+        options: {
+          emailRedirectTo: redirectUrl,
+          shouldCreateUser: false
+        }
+      });
+      if (error) throw error;
+
+      linkSent = true;
+      setMessage(
+        els.loginMessage,
+        "De inloglink is verstuurd. Gebruik alleen de nieuwste e-mail en klik één keer op de link.",
+        "success"
+      );
+    } catch (error) {
       setMessage(els.loginMessage, friendlyError(error, "De inloglink kon niet worden verstuurd."), "error");
-      return;
+    } finally {
+      setLoginBusy(false);
+      if (linkSent) startLoginCooldown(60);
     }
-    startLoginCooldown(60);
-    setMessage(
-      els.loginMessage,
-      "De inloglink is verstuurd. Gebruik alleen de nieuwste e-mail en klik één keer op de link.",
-      "success"
-    );
   }
 
   async function authorizeAndLoad(session) {
@@ -303,10 +307,11 @@
       showAdmin();
     } catch (error) {
       state.isAdmin = false;
-      await state.client.auth.signOut({ scope: "local" }).catch(() => {});
-      const message = error.message === "NO_ADMIN_ACCESS" || error.message === "NO_MAGIC_LINK_ACCESS"
+      const accessDenied = error?.message === "NO_ADMIN_ACCESS" || error?.message === "NO_MAGIC_LINK_ACCESS";
+      if (accessDenied) await state.client.auth.signOut({ scope: "local" }).catch(() => {});
+      const message = accessDenied
         ? "Dit account heeft geen beheerrechten."
-        : friendlyError(error, "De beheeromgeving kon niet worden geopend.");
+        : friendlyError(error, "De beheeromgeving kon niet worden geopend. Ververs de pagina om het opnieuw te proberen.");
       showLogin(message, "error");
     } finally {
       state.authorizing = false;
@@ -1244,7 +1249,16 @@
 
   function friendlyError(error, fallback) {
     const message = String(error?.message || "");
-    const code = String(error?.code || "");
+    const code = String(error?.code || "").toLowerCase();
+    if (code === "over_email_send_rate_limit" || code === "over_request_rate_limit") {
+      return "Er is net al een inloglink aangevraagd. Wacht even en gebruik alleen de nieuwste e-mail.";
+    }
+    if (code === "email_address_not_authorized") {
+      return "Dit e-mailadres mag geen beheerlink ontvangen. Controleer de toegestane e-mailadressen.";
+    }
+    if (code === "otp_disabled") {
+      return "Inloggen per e-mail is uitgeschakeld. Schakel e-mailinlog in en probeer het opnieuw.";
+    }
     if (!navigator.onLine || /failed to fetch|network|abort/i.test(message)) {
       return "Geen verbinding. Er is niets gewijzigd; probeer het opnieuw.";
     }

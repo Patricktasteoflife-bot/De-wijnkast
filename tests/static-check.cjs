@@ -199,7 +199,7 @@ if (serviceWorker.includes("cache.put(event.request")) throw new Error("Service 
 if (!serviceWorker.includes("WIJNKAST_SW_VERSION") || !adminApp.includes("ensureSafeServiceWorker")) {
   throw new Error("Een oude brede cache wordt niet vóór beheer bijgewerkt.");
 }
-if (!serviceWorker.includes('const VERSION = "wijnkast-v6-3-afgerond"') || !adminApp.includes("wijnkast-v6-3-afgerond")) {
+if (!serviceWorker.includes('const VERSION = "wijnkast-v6-4-collecties"') || !adminApp.includes("wijnkast-v6-4-collecties")) {
   throw new Error("De snelle klantenapp en beheeromgeving gebruiken niet dezelfde cacheversie.");
 }
 if (!headers.includes("/beheer\n") || !headers.includes("/beheer.html\n") || !headers.includes("Cache-Control: no-store")) {
