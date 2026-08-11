@@ -1,4 +1,4 @@
-const VERSION = "wijnkast-v6-8-equal-bottle-scale";
+const VERSION = "wijnkast-v6-9-phone-photo-upload";
 const CACHE = `taste-of-life-${VERSION}`;
 const ASSETS = [
   "/",

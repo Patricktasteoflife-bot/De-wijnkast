@@ -249,11 +249,21 @@
             </span>
             <small>Bij voorraad 0 verdwijnt de wijn uit de winkel.</small>
           </label>
-          <label class="full-width">
-            <span>Afbeeldingspad of https-URL</span>
-            <input name="image_url" maxlength="1000" autocomplete="off" />
-            <small>Bijvoorbeeld <code>mijn-wijn.png</code> of een beveiligde https-link.</small>
-          </label>
+          <div class="image-upload-field full-width">
+            <span>Wijnfoto</span>
+            <div class="image-upload-card">
+              <div class="image-upload-preview">
+                <img id="productImagePreview" alt="Voorbeeld van de gekozen wijnfoto" hidden />
+                <span id="productImagePlaceholder">Nog geen foto gekozen</span>
+              </div>
+              <div class="image-upload-actions">
+                <label class="primary-button compact image-picker" for="productImageInput">Foto kiezen vanaf telefoon</label>
+                <input id="productImageInput" type="file" accept="image/jpeg,image/png,image/webp" />
+                <p id="productImageStatus" role="status" aria-live="polite">Kies een foto; De Wijnkast verkleint en koppelt hem automatisch.</p>
+              </div>
+            </div>
+            <input name="image_url" type="hidden" />
+          </div>
           <label class="full-width">
             <span>Omschrijving</span>
             <textarea name="description" rows="7" maxlength="3000"></textarea>

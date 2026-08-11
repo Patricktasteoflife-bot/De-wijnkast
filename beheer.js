@@ -2,7 +2,7 @@
   "use strict";
 
   const OWNER_EMAIL = "patrick.tasteoflife@hotmail.com";
-  const SAFE_SW_VERSION = "wijnkast-v6-8-equal-bottle-scale";
+  const SAFE_SW_VERSION = "wijnkast-v6-9-phone-photo-upload";
   const EVERYDAY_SORT_START = 1000;
   const EXCLUSIVE_SORT_START = 5000;
   const COLLECTION_POSITION_MAX = 999;
@@ -10,6 +10,9 @@
   const SW_RELOAD_KEY = "tol-wijnkast-admin-sw-reload";
   const ORIGINAL_PRICE_PREFIX = "[[tol:original-price=";
   const ORIGINAL_PRICE_PATTERN = /^\[\[tol:original-price=(\d{1,9})\]\](?:\n|$)/;
+  const PRODUCT_IMAGE_MAX_SOURCE_BYTES = 12 * 1024 * 1024;
+  const PRODUCT_IMAGE_MAX_UPLOAD_BYTES = 2 * 1024 * 1024;
+  const PRODUCT_IMAGE_MAX_EDGE = 1600;
   const PRODUCT_SELECT = [
     "id", "sku", "name", "producer", "vintage", "region", "country", "color",
     "description", "image_url", "price_cents", "stock", "active", "sort_order",
@@ -37,7 +40,9 @@
     editingProduct: null,
     productDirty: false,
     savingProduct: false,
-    savingSettings: false
+    savingSettings: false,
+    pendingProductImage: null,
+    productPreviewObjectUrl: null
   };
 
   const els = {
@@ -81,6 +86,10 @@
     cancelProductButton: document.querySelector("#cancelProductButton"),
     saveProductButton: document.querySelector("#saveProductButton"),
     productMessage: document.querySelector("#productMessage"),
+    productImageInput: document.querySelector("#productImageInput"),
+    productImagePreview: document.querySelector("#productImagePreview"),
+    productImagePlaceholder: document.querySelector("#productImagePlaceholder"),
+    productImageStatus: document.querySelector("#productImageStatus"),
     toast: document.querySelector("#toast")
   };
 
@@ -228,6 +237,7 @@
     els.productForm.addEventListener("input", () => { state.productDirty = true; });
     els.productForm.addEventListener("change", () => { state.productDirty = true; });
     els.productForm.addEventListener("submit", saveProduct);
+    els.productImageInput.addEventListener("change", selectProductImage);
     els.closeProductDialog.addEventListener("click", requestCloseProductEditor);
     els.cancelProductButton.addEventListener("click", requestCloseProductEditor);
     els.productDialog.addEventListener("cancel", (event) => {
@@ -237,7 +247,10 @@
     els.productDialog.addEventListener("click", (event) => {
       if (event.target === els.productDialog) requestCloseProductEditor();
     });
-    els.productDialog.addEventListener("close", () => document.body.classList.remove("dialog-open"));
+    els.productDialog.addEventListener("close", () => {
+      clearProductPreviewObjectUrl();
+      document.body.classList.remove("dialog-open");
+    });
     els.productForm.querySelectorAll("[data-stock-step]").forEach((button) => {
       button.addEventListener("click", () => stepStock(Number(button.dataset.stockStep || 0)));
     });
@@ -823,6 +836,7 @@
     setProductField("price", product ? centsToInput(product.price_cents) : "");
     setProductField("stock", String(product?.stock ?? 0));
     setProductField("image_url", product?.image_url || "");
+    resetProductImageSelection(product?.image_url || "");
     setProductField("description", storedDescription.description);
     productField("active").checked = product ? product.active === true : true;
 
@@ -862,6 +876,17 @@
     state.savingProduct = true;
     setProductFormBusy(true);
     try {
+      if (state.pendingProductImage) {
+        els.saveProductButton.textContent = "Foto uploaden…";
+        setProductImageStatus("De foto wordt veilig opgeslagen…");
+        const uploadedImageUrl = await uploadProductImage(state.pendingProductImage);
+        payload.image_url = uploadedImageUrl;
+        setProductField("image_url", uploadedImageUrl);
+        state.pendingProductImage = null;
+        setProductImageStatus("Foto toegevoegd.", "success");
+        els.saveProductButton.textContent = "Wijn opslaan…";
+      }
+
       let saved;
       if (state.editingProduct) {
         const { data, error } = await state.client
@@ -943,6 +968,118 @@
       active: productField("active").checked,
       sort_order: sortOrder
     };
+  }
+
+  async function selectProductImage(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    clearProductMessage();
+    setProductImageStatus("Foto wordt voorbereid…");
+    try {
+      if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+        throw new Error("Kies een JPG-, PNG- of WebP-foto.");
+      }
+      if (file.size > PRODUCT_IMAGE_MAX_SOURCE_BYTES) {
+        throw new Error("Deze foto is te groot. Kies een foto kleiner dan 12 MB.");
+      }
+      const blob = await resizeProductImage(file);
+      clearProductPreviewObjectUrl();
+      state.productPreviewObjectUrl = URL.createObjectURL(blob);
+      state.pendingProductImage = {
+        blob,
+        filename: `wijnfoto-${Date.now()}.webp`
+      };
+      els.productImagePreview.src = state.productPreviewObjectUrl;
+      els.productImagePreview.hidden = false;
+      els.productImagePlaceholder.hidden = true;
+      state.productDirty = true;
+      setProductImageStatus("Foto gekozen. Hij wordt automatisch toegevoegd wanneer je de wijn opslaat.", "success");
+    } catch (error) {
+      event.target.value = "";
+      resetProductImageSelection(productField("image_url").value);
+      setProductImageStatus(error.message || "De foto kon niet worden voorbereid.", "error");
+    }
+  }
+
+  async function resizeProductImage(file) {
+    let bitmap;
+    try {
+      bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+    } catch {
+      bitmap = await createImageBitmap(file);
+    }
+    try {
+      const scale = Math.min(1, PRODUCT_IMAGE_MAX_EDGE / Math.max(bitmap.width, bitmap.height));
+      const width = Math.max(1, Math.round(bitmap.width * scale));
+      const height = Math.max(1, Math.round(bitmap.height * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext("2d", { alpha: false });
+      if (!context) throw new Error("De foto kan op dit toestel niet worden verwerkt.");
+      context.fillStyle = "#090604";
+      context.fillRect(0, 0, width, height);
+      context.drawImage(bitmap, 0, 0, width, height);
+      const blob = await new Promise((resolve, reject) => {
+        canvas.toBlob(
+          (result) => result ? resolve(result) : reject(new Error("De foto kon niet worden verkleind.")),
+          "image/webp",
+          .86
+        );
+      });
+      if (blob.size > PRODUCT_IMAGE_MAX_UPLOAD_BYTES) {
+        throw new Error("De foto blijft na verkleinen te groot. Kies een andere foto.");
+      }
+      return blob;
+    } finally {
+      bitmap.close?.();
+    }
+  }
+
+  async function uploadProductImage({ blob, filename }) {
+    const { data, error } = await state.client.auth.getSession();
+    if (error || !data.session?.access_token) throw new Error("Je beheersessie is verlopen. Log opnieuw in.");
+    const formData = new FormData();
+    formData.append("image", blob, filename);
+    const response = await fetchWithTimeout("/api/upload-wine-image", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${data.session.access_token}` },
+      body: formData
+    });
+    const result = await response.json().catch(() => null);
+    if (!response.ok || !result?.image_url) {
+      throw new Error(result?.error || "De foto kon niet worden geupload. Probeer het opnieuw.");
+    }
+    return normalizeImageUrl(result.image_url);
+  }
+
+  function resetProductImageSelection(imageUrl) {
+    clearProductPreviewObjectUrl();
+    state.pendingProductImage = null;
+    els.productImageInput.value = "";
+    const safeUrl = safeImageUrl(imageUrl);
+    if (safeUrl) {
+      els.productImagePreview.src = safeUrl;
+      els.productImagePreview.hidden = false;
+      els.productImagePlaceholder.hidden = true;
+      setProductImageStatus("Huidige foto. Kies een nieuwe foto om deze te vervangen.");
+    } else {
+      els.productImagePreview.removeAttribute("src");
+      els.productImagePreview.hidden = true;
+      els.productImagePlaceholder.hidden = false;
+      setProductImageStatus("Kies een foto; De Wijnkast verkleint en koppelt hem automatisch.");
+    }
+  }
+
+  function clearProductPreviewObjectUrl() {
+    if (state.productPreviewObjectUrl) URL.revokeObjectURL(state.productPreviewObjectUrl);
+    state.productPreviewObjectUrl = null;
+  }
+
+  function setProductImageStatus(message, type = "") {
+    els.productImageStatus.textContent = message;
+    els.productImageStatus.classList.toggle("success", type === "success");
+    els.productImageStatus.classList.toggle("error", type === "error");
   }
 
   function productCollection(product) {
