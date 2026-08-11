@@ -2,7 +2,7 @@
   "use strict";
 
   const OWNER_EMAIL = "patrick.tasteoflife@hotmail.com";
-  const SAFE_SW_VERSION = "wijnkast-v6-9-phone-photo-upload";
+  const SAFE_SW_VERSION = "wijnkast-v6-10-android-photo-fix";
   const EVERYDAY_SORT_START = 1000;
   const EXCLUSIVE_SORT_START = 5000;
   const COLLECTION_POSITION_MAX = 999;
@@ -13,6 +13,11 @@
   const PRODUCT_IMAGE_MAX_SOURCE_BYTES = 12 * 1024 * 1024;
   const PRODUCT_IMAGE_MAX_UPLOAD_BYTES = 2 * 1024 * 1024;
   const PRODUCT_IMAGE_MAX_EDGE = 1600;
+  const PRODUCT_IMAGE_PREPARE_TIMEOUT_MS = 15000;
+  const PRODUCT_IMAGE_UPLOAD_TIMEOUT_MS = 45000;
+  const PRODUCT_IMAGE_SOURCE_TYPES = new Set([
+    "image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"
+  ]);
   const PRODUCT_SELECT = [
     "id", "sku", "name", "producer", "vintage", "region", "country", "color",
     "description", "image_url", "price_cents", "stock", "active", "sort_order",
@@ -41,6 +46,7 @@
     productDirty: false,
     savingProduct: false,
     savingSettings: false,
+    preparingProductImage: false,
     pendingProductImage: null,
     productPreviewObjectUrl: null
   };
@@ -80,6 +86,7 @@
     saveSettingsButton: document.querySelector("#saveSettingsButton"),
     productDialog: document.querySelector("#productDialog"),
     productForm: document.querySelector("#productForm"),
+    productDialogScroll: document.querySelector("#productDialogScroll"),
     productDialogEyebrow: document.querySelector("#productDialogEyebrow"),
     productDialogTitle: document.querySelector("#productDialogTitle"),
     closeProductDialog: document.querySelector("#closeProductDialog"),
@@ -846,7 +853,7 @@
   }
 
   function requestCloseProductEditor() {
-    if (state.savingProduct) return;
+    if (state.savingProduct || state.preparingProductImage) return;
     if (state.productDirty && !window.confirm("Wijzigingen aan deze wijn niet opslaan?")) return;
     state.productDirty = false;
     els.productDialog.close();
@@ -874,7 +881,12 @@
     }
 
     state.savingProduct = true;
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
     setProductFormBusy(true);
+    setMessage(
+      els.productMessage,
+      state.pendingProductImage ? "De foto wordt geupload…" : "De wijn wordt opgeslagen…"
+    );
     try {
       if (state.pendingProductImage) {
         els.saveProductButton.textContent = "Foto uploaden…";
@@ -885,6 +897,7 @@
         state.pendingProductImage = null;
         setProductImageStatus("Foto toegevoegd.", "success");
         els.saveProductButton.textContent = "Wijn opslaan…";
+        setMessage(els.productMessage, "Foto toegevoegd. De wijn wordt opgeslagen…", "success");
       }
 
       let saved;
@@ -918,15 +931,17 @@
       renderProducts();
       showToast(`${saved.name} is opgeslagen.`);
     } catch (error) {
+      let message;
       if (error.message === "PRODUCT_CONFLICT") {
-        setMessage(
-          els.productMessage,
-          "Deze wijn is intussen gewijzigd, mogelijk door een reservering. Sluit dit venster, laad opnieuw en controleer de voorraad.",
-          "error"
-        );
+        message = "Deze wijn is intussen gewijzigd, mogelijk door een reservering. Sluit dit venster, laad opnieuw en controleer de voorraad.";
       } else {
-        setMessage(els.productMessage, friendlyError(error, "De wijn kon niet worden opgeslagen."), "error");
+        message = error?.code === "IMAGE_UPLOAD"
+          ? error.message
+          : friendlyError(error, "De wijn kon niet worden opgeslagen.");
       }
+      setMessage(els.productMessage, message, "error");
+      showToast(message, true);
+      window.setTimeout(() => els.productMessage.scrollIntoView({ block: "nearest", behavior: "smooth" }), 0);
     } finally {
       state.savingProduct = false;
       setProductFormBusy(false);
@@ -973,11 +988,16 @@
   async function selectProductImage(event) {
     const file = event.target.files?.[0];
     if (!file) return;
+    if (state.savingProduct || state.preparingProductImage) return;
+    state.preparingProductImage = true;
+    setProductImagePreparing(true);
     clearProductMessage();
     setProductImageStatus("Foto wordt voorbereid…");
     try {
-      if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-        throw new Error("Kies een JPG-, PNG- of WebP-foto.");
+      const type = String(file.type || "").toLowerCase();
+      const hasKnownPhotoExtension = /[.](?:jpe?g|png|webp|heic|heif)$/i.test(file.name || "");
+      if ((type && !PRODUCT_IMAGE_SOURCE_TYPES.has(type)) || (!type && !hasKnownPhotoExtension)) {
+        throw new Error("Kies een foto uit je galerij.");
       }
       if (file.size > PRODUCT_IMAGE_MAX_SOURCE_BYTES) {
         throw new Error("Deze foto is te groot. Kies een foto kleiner dan 12 MB.");
@@ -998,20 +1018,38 @@
       event.target.value = "";
       resetProductImageSelection(productField("image_url").value);
       setProductImageStatus(error.message || "De foto kon niet worden voorbereid.", "error");
+      showToast(error.message || "De foto kon niet worden voorbereid.", true);
+    } finally {
+      state.preparingProductImage = false;
+      setProductImagePreparing(false);
     }
   }
 
   async function resizeProductImage(file) {
-    let bitmap;
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
     try {
-      bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
-    } catch {
-      bitmap = await createImageBitmap(file);
-    }
-    try {
-      const scale = Math.min(1, PRODUCT_IMAGE_MAX_EDGE / Math.max(bitmap.width, bitmap.height));
-      const width = Math.max(1, Math.round(bitmap.width * scale));
-      const height = Math.max(1, Math.round(bitmap.height * scale));
+      image.decoding = "async";
+      const loaded = new Promise((resolve, reject) => {
+        image.addEventListener("load", resolve, { once: true });
+        image.addEventListener("error", () => reject(new Error("Deze foto kan niet worden gelezen. Kies of bewaar hem als JPG.")), { once: true });
+      });
+      image.src = objectUrl;
+      const decoded = typeof image.decode === "function"
+        ? image.decode().catch(() => loaded)
+        : loaded;
+      await withTimeout(
+        decoded,
+        PRODUCT_IMAGE_PREPARE_TIMEOUT_MS,
+        "Het voorbereiden duurt te lang. Kies een andere foto of bewaar hem eerst als JPG."
+      );
+
+      const sourceWidth = Number(image.naturalWidth || image.width);
+      const sourceHeight = Number(image.naturalHeight || image.height);
+      if (!sourceWidth || !sourceHeight) throw new Error("Deze foto kan niet worden gelezen. Kies of bewaar hem als JPG.");
+      const scale = Math.min(1, PRODUCT_IMAGE_MAX_EDGE / Math.max(sourceWidth, sourceHeight));
+      const width = Math.max(1, Math.round(sourceWidth * scale));
+      const height = Math.max(1, Math.round(sourceHeight * scale));
       const canvas = document.createElement("canvas");
       canvas.width = width;
       canvas.height = height;
@@ -1019,38 +1057,77 @@
       if (!context) throw new Error("De foto kan op dit toestel niet worden verwerkt.");
       context.fillStyle = "#090604";
       context.fillRect(0, 0, width, height);
-      context.drawImage(bitmap, 0, 0, width, height);
-      const blob = await new Promise((resolve, reject) => {
-        canvas.toBlob(
-          (result) => result ? resolve(result) : reject(new Error("De foto kon niet worden verkleind.")),
-          "image/webp",
-          .86
-        );
-      });
+      context.drawImage(image, 0, 0, width, height);
+      const blob = await withTimeout(
+        new Promise((resolve, reject) => {
+          canvas.toBlob(
+            (result) => result ? resolve(result) : reject(new Error("De foto kon niet worden verkleind.")),
+            "image/webp",
+            .86
+          );
+        }),
+        PRODUCT_IMAGE_PREPARE_TIMEOUT_MS,
+        "Het verkleinen duurt te lang. Kies een andere foto."
+      );
       if (blob.size > PRODUCT_IMAGE_MAX_UPLOAD_BYTES) {
         throw new Error("De foto blijft na verkleinen te groot. Kies een andere foto.");
       }
       return blob;
     } finally {
-      bitmap.close?.();
+      image.removeAttribute("src");
+      URL.revokeObjectURL(objectUrl);
     }
   }
 
   async function uploadProductImage({ blob, filename }) {
     const { data, error } = await state.client.auth.getSession();
-    if (error || !data.session?.access_token) throw new Error("Je beheersessie is verlopen. Log opnieuw in.");
+    if (error || !data.session?.access_token) throw imageUploadError("Je beheersessie is verlopen. Log opnieuw in.");
     const formData = new FormData();
     formData.append("image", blob, filename);
-    const response = await fetchWithTimeout("/api/upload-wine-image", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${data.session.access_token}` },
-      body: formData
-    });
+    let response;
+    try {
+      response = await fetchWithTimeout("/api/upload-wine-image", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${data.session.access_token}` },
+        body: formData
+      }, PRODUCT_IMAGE_UPLOAD_TIMEOUT_MS);
+    } catch (uploadError) {
+      if (uploadError?.name === "AbortError") {
+        throw imageUploadError("Het uploaden duurde te lang. Er is niets opgeslagen; probeer het opnieuw.");
+      }
+      throw imageUploadError("Geen verbinding tijdens het uploaden. Er is niets opgeslagen; probeer het opnieuw.");
+    }
     const result = await response.json().catch(() => null);
     if (!response.ok || !result?.image_url) {
-      throw new Error(result?.error || "De foto kon niet worden geupload. Probeer het opnieuw.");
+      throw imageUploadError(result?.error || "De foto kon niet worden geupload. Probeer het opnieuw.");
     }
     return normalizeImageUrl(result.image_url);
+  }
+
+  function imageUploadError(message) {
+    const error = new Error(message);
+    error.code = "IMAGE_UPLOAD";
+    return error;
+  }
+
+  function withTimeout(promise, timeoutMs, message) {
+    let timer;
+    return Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        timer = window.setTimeout(() => reject(new Error(message)), timeoutMs);
+      })
+    ]).finally(() => window.clearTimeout(timer));
+  }
+
+  function setProductImagePreparing(preparing) {
+    els.productImageInput.disabled = preparing;
+    els.saveProductButton.disabled = preparing;
+    els.cancelProductButton.disabled = preparing;
+    els.closeProductDialog.disabled = preparing;
+    if (!state.savingProduct) {
+      els.saveProductButton.textContent = preparing ? "Foto voorbereiden…" : "Wijn opslaan";
+    }
   }
 
   function resetProductImageSelection(imageUrl) {
@@ -1266,16 +1343,13 @@
   }
 
   function setProductFormBusy(busy) {
-    els.saveProductButton.disabled = busy;
+    els.productForm.setAttribute("aria-busy", String(busy));
+    els.productDialogScroll.inert = busy;
+    els.saveProductButton.disabled = busy || state.preparingProductImage;
     els.cancelProductButton.disabled = busy;
     els.closeProductDialog.disabled = busy;
+    els.productImageInput.disabled = busy || state.preparingProductImage;
     els.saveProductButton.textContent = busy ? "Opslaan…" : "Wijn opslaan";
-    Array.from(els.productForm.elements).forEach((control) => { control.disabled = busy; });
-    if (!busy) {
-      els.saveProductButton.disabled = false;
-      els.cancelProductButton.disabled = false;
-      els.closeProductDialog.disabled = false;
-    }
   }
 
   function sortProducts() {
@@ -1496,9 +1570,9 @@
     showToast.timer = window.setTimeout(() => els.toast.classList.remove("show"), 3600);
   }
 
-  async function fetchWithTimeout(input, init = {}) {
+  async function fetchWithTimeout(input, init = {}, timeoutMs = 20000) {
     const controller = new AbortController();
-    const timer = window.setTimeout(() => controller.abort(), 20000);
+    const timer = window.setTimeout(() => controller.abort(), timeoutMs);
     const sourceSignal = init.signal;
     const forwardAbort = () => controller.abort();
     if (sourceSignal) sourceSignal.addEventListener("abort", forwardAbort, { once: true });

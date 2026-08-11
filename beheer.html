@@ -180,7 +180,8 @@
           <button class="icon-button" id="closeProductDialog" type="button" aria-label="Sluiten">×</button>
         </div>
 
-        <div class="editor-grid">
+        <div class="dialog-scroll" id="productDialogScroll">
+          <div class="editor-grid">
           <label>
             <span>Naam *</span>
             <input name="name" required maxlength="160" autocomplete="off" />
@@ -258,7 +259,7 @@
               </div>
               <div class="image-upload-actions">
                 <label class="primary-button compact image-picker" for="productImageInput">Foto kiezen vanaf telefoon</label>
-                <input id="productImageInput" type="file" accept="image/jpeg,image/png,image/webp" />
+                <input id="productImageInput" type="file" accept="image/*" />
                 <p id="productImageStatus" role="status" aria-live="polite">Kies een foto; De Wijnkast verkleint en koppelt hem automatisch.</p>
               </div>
             </div>
@@ -276,9 +277,10 @@
               <small>Zet dit uit om de wijn tijdelijk te verbergen zonder hem te verwijderen.</small>
             </span>
           </label>
-        </div>
+          </div>
 
-        <p class="form-message" id="productMessage" role="status" aria-live="polite"></p>
+          <p class="form-message" id="productMessage" role="status" aria-live="assertive"></p>
+        </div>
         <div class="dialog-actions">
           <button class="quiet-button" id="cancelProductButton" type="button">Annuleren</button>
           <button class="primary-button compact" id="saveProductButton" type="submit">Wijn opslaan</button>

@@ -1,4 +1,4 @@
-const VERSION = "wijnkast-v6-9-phone-photo-upload";
+const VERSION = "wijnkast-v6-10-android-photo-fix";
 const CACHE = `taste-of-life-${VERSION}`;
 const ASSETS = [
   "/",
