@@ -33,12 +33,20 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = UPSTREAM_TIMEOUT_
   }
 }
 
-function serviceHeaders(serviceRoleKey, contentType = "application/json") {
-  return {
-    apikey: serviceRoleKey,
-    Authorization: `Bearer ${serviceRoleKey}`,
+function serviceHeaders(serverKey, contentType = "application/json") {
+  const headers = {
+    apikey: serverKey,
     "Content-Type": contentType
   };
+
+  // Nieuwe Supabase secret keys (sb_secret_...) zijn geen JWT en mogen niet
+  // als Bearer-token worden verstuurd. De gateway herkent ze via `apikey` en
+  // geeft de aanvraag serverrechten. De oude service_role-JWT blijft zo ook
+  // ondersteund.
+  if (!String(serverKey).startsWith("sb_secret_")) {
+    headers.Authorization = `Bearer ${serverKey}`;
+  }
+  return headers;
 }
 
 function validImageSignature(bytes, type) {
@@ -73,10 +81,26 @@ async function requireAdmin(request, baseUrl, serviceRoleKey) {
   return { status: isAdmin === true ? 200 : 403 };
 }
 
-async function ensurePublicBucket(baseUrl, serviceRoleKey) {
+async function storageError(response, fallbackCode) {
+  const body = await response.json().catch(() => ({}));
+  const code = String(body.code || body.error || fallbackCode || "STORAGE_ERROR").slice(0, 80);
+  const error = new Error(code);
+  error.storageCode = code;
+  error.storageStatus = response.status;
+  return error;
+}
+
+async function ensurePublicBucket(baseUrl, serverKey) {
+  const existing = await fetchWithTimeout(`${baseUrl}/storage/v1/bucket/${BUCKET}`, {
+    method: "GET",
+    headers: serviceHeaders(serverKey)
+  });
+  if (existing.ok) return;
+  if (existing.status !== 404) throw await storageError(existing, "BUCKET_CHECK_FAILED");
+
   const response = await fetchWithTimeout(`${baseUrl}/storage/v1/bucket`, {
     method: "POST",
-    headers: serviceHeaders(serviceRoleKey),
+    headers: serviceHeaders(serverKey),
     body: JSON.stringify({
       id: BUCKET,
       name: BUCKET,
@@ -87,9 +111,12 @@ async function ensurePublicBucket(baseUrl, serviceRoleKey) {
   });
   if (response.ok || response.status === 409) return;
   const body = await response.json().catch(() => ({}));
-  const message = String(body.message || body.error || "").toLowerCase();
-  if (response.status === 400 && /already exists|duplicate/.test(message)) return;
-  throw new Error("BUCKET_SETUP_FAILED");
+  const message = String(body.message || body.error || body.code || "").toLowerCase();
+  if (response.status === 400 && /already exists|already_exist|duplicate/.test(message)) return;
+  const error = new Error(String(body.code || body.error || "BUCKET_SETUP_FAILED").slice(0, 80));
+  error.storageCode = String(body.code || body.error || "BUCKET_SETUP_FAILED").slice(0, 80);
+  error.storageStatus = response.status;
+  throw error;
 }
 
 export async function onRequestPost({ request, env }) {
@@ -151,7 +178,7 @@ export async function onRequestPost({ request, env }) {
       },
       body: bytes
     }, STORAGE_UPLOAD_TIMEOUT_MS);
-    if (!uploadResponse.ok) throw new Error("UPLOAD_FAILED");
+    if (!uploadResponse.ok) throw await storageError(uploadResponse, "UPLOAD_FAILED");
     return reply({
       image_url: `${baseUrl}/storage/v1/object/public/${BUCKET}/${encodedPath}`
     }, 201);
@@ -159,6 +186,19 @@ export async function onRequestPost({ request, env }) {
     if (error?.message === "UPSTREAM_TIMEOUT") {
       return reply({ error: "De foto-opslag reageert te langzaam. Probeer het opnieuw." }, 504);
     }
-    return reply({ error: "De foto kon niet veilig worden opgeslagen. Probeer het opnieuw." }, 502);
+    console.error("Wijnfoto-opslag mislukt", {
+      status: Number(error?.storageStatus || 0),
+      code: String(error?.storageCode || error?.message || "STORAGE_ERROR").slice(0, 80)
+    });
+    if ([401, 403].includes(Number(error?.storageStatus))) {
+      return reply({
+        error: "De beveiligde foto-opslag heeft geen toegang. Ververs Beheer en probeer het nog één keer.",
+        code: "STORAGE_AUTH_FAILED"
+      }, 502);
+    }
+    return reply({
+      error: "De foto kon niet veilig worden opgeslagen. Probeer het opnieuw.",
+      code: "STORAGE_UPLOAD_FAILED"
+    }, 502);
   }
 }
